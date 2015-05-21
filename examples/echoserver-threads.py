@@ -4,7 +4,6 @@
 An echo server that uses threads to handle multiple clients at a time.
 Entering any line of input at the terminal will exit the server.
 """
-
 import select
 import socket
 import sys
