@@ -1,0 +1,358 @@
+
+
+
+
+
+
+INTERNET‐DRAFT                                              Bryan Martin
+CS494 Project RFC                              Portland State University
+May 2015
+
+
+                      Internet Relay Chat Protocol
+
+                          Status of this Memo
+
+   This document is not an Internet Standards Track specification; it is
+   published for examination, experimental implementation, and
+   evaluation.
+
+   This document defines an Experimental Protocol for the Internet
+   community.  This document is a product of the Internet Engineering
+   Task Force (IETF).  It has not yet been approved for publication by
+   the Internet Engineering Steering Group (IESG).  Not all documents
+   approved by the IESG are a candidate for any level of Internet
+   Standard; see Section 2 of RFC 5741.
+
+   Information about the current status of this document, any errata,
+   and how to provide feedback on it may be obtained at http://www.rfc‐
+   editor.org/info/rfc<rfc‐no>.
+
+Abstract
+
+   The goal of this project is to develop and demonstrate a working IRC
+   protocol and implementing an IRC client and server in python. IRC is
+   a text‐based protocol that allows IRC clients to send messages to
+   eachother over a socket connection to the IRC server. This
+   implementation of the IRC protocol will support multiple clients and
+   multiple chat rooms.
+
+
+Table of Contents
+
+   1  Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+      1.1  Server  . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+      1.2  Client  . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+   2  The IRC Specification  . . . . . . . . . . . . . . . . . . . . . 2
+      2.1  Overview  . . . . . . . . . . . . . . . . . . . . . . . . . 2
+      2.2  Connections . . . . . . . . . . . . . . . . . . . . . . . . 2
+      2.3  Rooms . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+      2.4  Users . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+      2.5  Messages  . . . . . . . . . . . . . . . . . . . . . . . . . 3
+      2.6  Commands  . . . . . . . . . . . . . . . . . . . . . . . . . 3
+   3  Possible Features  . . . . . . . . . . . . . . . . . . . . . . . 5
+   4  References . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+   Authors’ Addresses  . . . . . . . . . . . . . . . . . . . . . . . . 5
+
+
+Bryan Martin                                                    [Page 1]
+
+
+
+
+
+INTERNET DRAFT        Internet Relay Chat Protocol              May 2015
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Bryan Martin                                                    [Page 2]
+
+
+
+
+
+INTERNET DRAFT        Internet Relay Chat Protocol              May 2015
+
+
+1  Introduction
+
+   This protocol is intented to provide a means of text based
+   communication between clients via a central server in a client‐server
+   model. This protocol will operate over the TCP/IP protocols to
+   connect clients and servers over TCP socket connections. The
+   functionality of this protocol will be demonstrated by setting up a
+   single process as the server which will form a central point for
+   clients to connect to. Clients will send messages or commands to the
+   server to be delivered or executed.
+
+1.1  Server
+
+   The IRC server will allow clients to establish socket connections.
+   The server will monitor the all of the socket connections that have
+   been established by clients for messages or commands. The server will
+   then deliver messages to clients or execute commands for clients.
+   Commands to be executed will include user creation, login, view
+   users, view rooms, join room, leave room, create room, list room
+   members, and logout. This will require the server to maintain a list
+   of users. This list of users will be a data structure used to track
+   connection and room membership. The server will also need to maintain
+   a list of rooms. This list of rooms will consist of a data structure
+   to track the users who are in the room.
+
+1.2 Client
+
+   The IRC client will need to establish a TCP socket connection to the
+   IRC server and forward stdin to the IRC server. The client will also
+   need to display messages from the server on stdout. Clients will be
+   able to log in to a user or create a new user. Clients will be able
+   to view all logged in users and all rooms. Clients will be able to
+   join, create, and leave rooms. Clients will be able send messages to
+   all clients within a room. Clients will be able to logout.
+
+2.  The IRC Specification
+
+2.1 Overview
+
+   The protocol as described herein is for use only with client to
+   server connections when the client registers as a user.
+
+2.2 Connections
+
+   Connections will be established between clients and a server over
+   TCP/IP socket connections. This application will be implemented in
+   the python language and will utilize the socket class and library to
+   create connections.
+
+
+
+Bryan Martin                                                    [Page 3]
+
+
+
+
+
+INTERNET DRAFT        Internet Relay Chat Protocol              May 2015
+
+
+2.3 Rooms
+
+   Rooms will be created by commands issued from user clients and
+   executed by the server. A room will simply be a list of users
+   currently joined.  A list of all rooms will need to be maintained by
+   the server.
+
+2.4 Users
+
+   Users will be created upon request of a client to the server. The
+   server will maintain a list of all users. The list of users will
+   consist of user entries. Each entry will contain a connection and
+   rooms field. Upon creation of a user, the server must create an entry
+   in the user list and update the user entry connection information to
+   the client connection.  Upon successful login, the server must update
+   the user entry connection information to the client connection. Upon
+   successful logout, the user entry must have the connection
+   information set to NULL. Upon joining or leaving a room, the user
+   entry room field must be updated.
+
+2.5 Messages
+
+   Messages will be input from stdin on client machines that will be a
+   accessed by the server over the socket connection and handled by the
+   server. Messages may either be a command for the server to process,
+   or a message for the server to deliver. Commands will be identified
+   by a command prefix that must begin any command a user wishes to
+   execute. All messages that do not begin with the command prefix will
+   be interpreted as messages to be delivered to the appropriate room.
+
+2.6 Commands
+
+   All commands must begin with the command prefix in order to be
+   handled the server. The following commands may be issued by clients:
+
+      create_user: Server will create a user entry in the user list and
+                   update the new user entry name to the specified
+                   username and the connection to the client socket.
+
+          Usage:   <command prefix>create_user <desired username>
+
+      login: Server will update the connection field of the user entry
+             specified to the client socket.
+
+          Usage:   <command prefix>login <username>
+
+
+
+
+
+
+Bryan Martin                                                    [Page 4]
+
+
+
+
+
+INTERNET DRAFT        Internet Relay Chat Protocol              May 2015
+
+
+      users: Server will return a list of all users with a connections
+             entry to the client. If a room name is given in the OPTION
+             field, the server will return a list of users in the given
+             room.
+
+          Usage:   <command prefix>users ‐[OPTION]
+
+      rooms: Server will return a list of all rooms to the client.
+
+          Usage:   <command prefix>rooms
+
+
+The following commands may be issued by users:
+
+      join_room: Server will add the desired room to the users rooms
+                 list.
+
+          Usage:   <command prefix>join_room <room name>
+
+      create_room: Server will add the room specified to the rooms
+                   list. The server will then add the user to the
+                   newly created room with the join_room procedure.
+
+          Usage:   <command prefix>create_room <room name>
+
+
+      leave_room: Server will remove the desired room to the users rooms
+                 list.
+
+          Usage:   <command prefix>leave_room <room name>
+
+
+      logout: Server will set the connection field of the user entry to
+              NULL.
+
+          Usage:   <command prefix>logout <username>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Bryan Martin                                                    [Page 5]
+
+
+
+
+
+INTERNET DRAFT        Internet Relay Chat Protocol              May 2015
+
+
+3  Possible Features
+
+      Additional features may be added to this protocol given time
+      constraints. If a full implementation is complete, effort will
+      be made to implement file transfer, private messaging, and secure
+      connections will be attempted in that order.
+
+4  References
+
+      RFC 2223         Instructions to RFC Authors         October 1997
+
+      RFC 2813      Internet Relay Chat: Server Protocol     April 2000
+
+      RFC 2812      Internet Relay Chat: Client Protocol     April 2000
+
+      RFC 1459         Internet Relay Chat Protocol            May 1993
+
+
+Authors’ Addresses
+
+
+      Bryan Martin
+
+      EMail: bryan3@pdx.edu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Bryan Martin                                                    [Page 6]
+
+
