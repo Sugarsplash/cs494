@@ -11,6 +11,7 @@ def broadcast_data (sock, message):
                 socket.send(message)
             except :
                 # broken socket connection may be, chat client pressed ctrl+c for example
+                print "OH, he gettin removed and shit."
                 socket.close()
                 CONNECTION_LIST.remove(socket)
 
@@ -48,18 +49,8 @@ if __name__ == "__main__":
             #Some incoming message from a client
             else:
                 # Data recieved from client, process it
-                try:
-                   #In Windows, sometimes when a TCP program closes abruptly,
-                    # a "Connection reset by peer" exception will be thrown
-                    data = sock.recv(RECV_BUFFER)
-                    if data:
-                        broadcast_data(sock, "\r" + '<' + str(sock.getpeername()) + '> ' + data)
+                data = sock.recv(RECV_BUFFER)
+                if data:
+                    broadcast_data(sock, "\r" + '<' + str(sock.getpeername()) + '> ' + data)
 
-                except:
-                    broadcast_data(sock, "Client (%s, %s) is offline" % addr)
-                    print "Client (%s, %s) is offline" % addr
-                    sock.close()
-                    CONNECTION_LIST.remove(sock)
-                    continue
-
-server_socket.close()
+    server_socket.close()
