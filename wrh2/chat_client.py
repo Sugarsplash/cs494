@@ -9,15 +9,18 @@ import select   # for select function
 import string   # for string stuff
 import sys      # for handling command line arguments
 
-def prompt(username) :
+def prompt() :
     """Function creates a user prompt
+
     :param username: the user's name
     """
-    sys.stdout.write("<%s> " % username) # prompt user
-    sys.stdout.flush()                   # flush buffer
+
+    sys.stdout.write("->") # prompt user
+    sys.stdout.flush()     # flush buffer
 
 if __name__ == "__main__":
     """Main function
+
     """
     
     # user supplied the wrong amount of arguments
@@ -50,7 +53,7 @@ if __name__ == "__main__":
         print 'Unable to authenticate username'
         sys.exit()
     print 'Username authenticated'
-    prompt(username)
+    prompt()
 
     while 1:
         socket_list = [sys.stdin, s]
@@ -68,11 +71,11 @@ if __name__ == "__main__":
                     sys.exit()
                 else :
                     sys.stdout.write(data + "\n")
-                    prompt(username)
+                    prompt()
         
             #user entered a message
             else :
                 msg = sys.stdin.readline()
                 s.send(msg)
-                prompt(username)
+                prompt()
             

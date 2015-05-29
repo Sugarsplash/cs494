@@ -9,6 +9,7 @@ import logging # for logging
 
 def broadcast_data (sock, message):
     """Function to broadcast chat messages to all connected clients
+
     :param sock: socket object
     :param message: message to send
     """
@@ -26,6 +27,7 @@ def broadcast_data (sock, message):
 
 def parse_data(sock, message):
     """Function to parse the data received and perform the appropriate action
+
     :param sock: socket object
     :param message: message to parse
     """
@@ -46,6 +48,7 @@ def parse_data(sock, message):
 
 def parse_data2(sock, message):
     """Function receives data parsed based on whitespace and takes the appropriate action
+
     :param sock: socket object
     :param message: message to dictate action
     """
@@ -91,6 +94,7 @@ def parse_data2(sock, message):
 
 def who(sock):
     """Function shows user other users connected to server
+
     :param sock: socket object
     """
     # send user list to user
@@ -101,6 +105,7 @@ def who(sock):
 
 def peek(sock, channel):
     """Function shows user who is in a specific channel
+
     :param sock: socket object
     :param channel: channel to check
     """
@@ -123,8 +128,10 @@ def peek(sock, channel):
 
 def list(sock):
     """Function shows user list of channels on server
+
     :param sock: socket object
     """
+
     # send user list of channels
     if len(CHANNEL_LIST) == 0:
         sock.send("\n" + "No channels currently on server" + "\n" + "type /join and then a channel name to create one!")
@@ -137,6 +144,7 @@ def list(sock):
 
 def joinchannel(sock, channel):
     """Function joins user to channel
+
     :param sock: socket object
     :param channel: channel name
     """
@@ -144,15 +152,18 @@ def joinchannel(sock, channel):
         accounts[sock]['channels'].append(channel) # add channel to user's channels
         accounts[sock]['current'] = channel        # make channel the user's current channel
         sock.send(("\n" + "Joined %s") % channel)
+        broadcast_data(sock, ('\n%s joined %s\n') % (accounts[sock]['username'], channel)) #tell everyone someone has arrived
     else:
         CHANNEL_LIST.append(channel)               # create channel by adding it to the channel list
         accounts[sock]['channels'].append(channel) # add channel to user's channels
         accounts[sock]['current'] = channel        # make channel the user's current channel
         sock.send(("\n" + "Joined %s") % channel)
+        broadcast_data(sock, ('\n' + '%s joined %s' + '\n') % (accounts[sock]['username'], channel)) #tell everyone someone has arrived
     logging.info('Channel list: %s' % CHANNEL_LIST)# for the server log
 
 def leavechannel(sock, channel):
     """Function removes user from channel
+
     :param sock: socket object
     :param channel: channel to leave
     """
@@ -164,11 +175,13 @@ def leavechannel(sock, channel):
         accounts[sock]['channels'].remove(channel) # remove channel from user's channel list
         logging.info('%s left %s' % (accounts[sock]['username'], channel))
         sock.send(("\n" + "You left %s") % channel)
+        broadcast_data(sock, ('\n%s left %s\n') % (accounts[sock]['username'], channel))
     else:
         sock.send("\n" + "Channel not in channel list" + "\n" + "Must be in a channel to leave")
 
 def logoff(sock):
     """Function logs a client off the server
+
     :param sock: socket object:
     """
     broadcast_data(sock, "\n" + "%s has gone offline" % accounts[sock]['username']) #tell everyone what is going on
@@ -179,6 +192,7 @@ def logoff(sock):
 
 if __name__ == "__main__":
     """Main function
+
     """
 
     logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s', datefmt='%d/%m/%Y %I:%M:%S %p')
@@ -231,7 +245,7 @@ if __name__ == "__main__":
                 USER_LIST.append(accounts[sockfd]['username']) #Add to user list
                 logging.info('Client (%s, %s) connected' % addr) #log some information
                 logging.info('Client is know as %s, added to the user list' % accounts[sockfd]['username']) #log some information
-                broadcast_data(sockfd, "%s entered room\n" % accounts[sockfd]['username']) #tell everyone someone has arrived
+                
             #Some incoming message from a client
             else:
                 # Data recieved from client, process it
@@ -240,7 +254,10 @@ if __name__ == "__main__":
                     # a "Connection reset by peer" exception will be thrown
                     data = sock.recv(RECV_BUFFER).strip()
                     if data:
-                        parse_data(sock,data)
+                        if data.find('/')==0:
+                            parse_data(sock, data)
+                        else:
+                            parse_data(sock, "/PRIVMSG " + data)
 
                 except:
                     logoff(sock)
