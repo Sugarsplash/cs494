@@ -9,7 +9,6 @@ import select   # for select function
 import string   # for string stuff
 import sys      # for handling command line arguments
 
-
 def prompt(username) :
     """Function creates a user prompt
     :param username: the user's name
@@ -59,15 +58,15 @@ if __name__ == "__main__":
         # Get the list sockets which are readable
         read_sockets, write_sockets, error_sockets = select.select(socket_list , [], [])
         
+        #try:
         for sock in read_sockets:
-            #incoming message from remote server
+        #incoming message from remote server
             if sock == s:
                 data = sock.recv(4096)
                 if not data :
                     print '\nDisconnected from chat server'
                     sys.exit()
                 else :
-                    #print data
                     sys.stdout.write(data + "\n")
                     prompt(username)
         
@@ -76,3 +75,4 @@ if __name__ == "__main__":
                 msg = sys.stdin.readline()
                 s.send(msg)
                 prompt(username)
+            
