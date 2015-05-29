@@ -27,6 +27,7 @@ def parse_data(sock, message):
     :param sock: socket object
     :param message: message to parse
     """
+    
     if message.find('/who')==0:
         logging.info('%s requested user list' % accounts[sock]['username'])
         logging.info('%s' % USER_LIST)
@@ -56,18 +57,16 @@ def joinchannel(sock, channel):
     :param sock: socket object
     :param channel: channel name
     """
-    # look for the channel name in the channel list
-    for channels in CHANNEL_LIST:
-        # if the channel is in the list
-        if channel:
-            accounts[sock]['channels'].append(channel) # add channel to user's channels
-            accounts[sock]['current'] = channel        # make channel the user's current channel
-            sock.send(("\n" + "Joined %s") % channel)  # tell the user their in the channel now
-        else:
-            CHANNEL_LIST.append(channel)               # create channel by adding it to the channel list
-            accounts[sock]['channels'].append(channel) # add channel to user's channels
-            accounts[sock]['current'] = channel        # make channel the user's current channel
-            sock.send(("\n" + "Joined %s") % channel)  # tell the user their in the channel now
+    print channel
+    if channel in CHANNEL_LIST:
+        accounts[sock]['channels'].append(channel) # add channel to user's channels
+        accounts[sock]['current'] = channel        # make channel the user's current channel
+        sock.send(("\n" + "Joined %s") % channel)  # tell the user their in the channel now
+    else:
+        CHANNEL_LIST.append(channel)               # create channel by adding it to the channel list
+        accounts[sock]['channels'].append(channel) # add channel to user's channels
+        accounts[sock]['current'] = channel        # make channel the user's current channel
+        sock.send(("\n" + "Joined %s") % channel)  # tell the user their in the channel now
     logging.info('Channel list: %s' % CHANNEL_LIST)    # for the server log
 
 
@@ -120,7 +119,7 @@ if __name__ == "__main__":
                 accounts[sockfd]={
                     'username': '',
                     'key': '',
-                    'channels': '',
+                    'channels': [],
                     'current': ''
                 }
 
