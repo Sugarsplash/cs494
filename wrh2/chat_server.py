@@ -16,74 +16,78 @@ def broadcast_data (sock, message):
     #Do not send the message to master socket and the client who has send us the message
     for socket in CONNECTION_LIST:
         if socket != server_socket and socket != sock :
-            # try to send the message, if we can't send socket timed out so log client off
-            try :
-                #socket.send(cPickle.dumps(message))
-                socket.send(message)
-            except :
-                logoff(socket)
+            if accounts[socket]['current'] == accounts[sock]['current']:
+                # try to send the message, if we can't send socket timed out so log client off
+                try :
+                    socket.send(message)
+                except :
+                    logoff(socket)
+
 
 def parse_data(sock, message):
     """Function to parse the data received and perform the appropriate action
     :param sock: socket object
     :param message: message to parse
     """
-    
-    # received who command
-    if message.find('/who')==0:
-        logging.info('%s requested user list' % accounts[sock]['username'])
-        logging.info('Current user list: %s' % USER_LIST)
-        who(sock)
-    
-    # received a peek command
-    elif message.find('/peek')==0:
-        if message[6] and ((' ' in message[6:]) == False):
-            peek(sock, message[6:])
-        else:
-            sock.send("\n" + "Must give a channel name to peek at" + "\n")
-     
-        
-    # received a list command
-    elif message.find('/list')==0:
-        logging.info('%s requested list of channels' % accounts[sock]['username'])
-        logging.info('Current list of channels: %s' % CHANNEL_LIST)
-        list(sock)
-
-    # received joined command
-    elif message.find('/join')==0:
-        if message[6]:
-            logging.info(('%s user wants to join ' + message[6:]) % accounts[sock]['username']) # log info for server
-            joinchannel(sock, message[6:])                                                      # try to put user in channel
-        else:
-            logging.info('%s sent invalid command' % accounts[sock]['username'])                # user sent invalid command
-
-    # received leave command
-    elif message.find('/leave')==0:
-        
-        # make sure we have received a channel name to try and leave
-        if message[7]:
-            logging.info(('%s sent request to leave' + message[7:]) % accounts[sock]['username']) # log info for server
-            leavechannel(sock, message[7:])                                                       # try to take user out of channel
-        else:
-            logging.info('%s user sent invalid command' % accounts[sock]['username'])             # user sent invalid command
-
-    # received PRIVMSG command
-    elif message.find('/PRIVMSG')==0:
-
+    # received PRIVMSG command, check for this first because the other commands are parsed based on white space while this one is not
+    if message.find('/PRIVMSG')==0:
         # check to see that we even actually have a message
-        if message[9]:
-            broadcast_data(sock, "\n" + "<" + accounts[sock]['username'] + "> " + message[9:]) # we have a message so send it
+        if len(accounts[sock]['channels']) == 0:
+            sock.send("\n" + "Must join channel to send a message" + "\n")
         else:
-            sock.send("\n" + "Empty message, nothing has been sent") # we didn't actually get a message from the user to send, bad user!
+            if message[9]:
+                broadcast_data(sock, "\n" + "<" + accounts[sock]['username'] + "> " + message[9:]) # we have a message so send it
+            else:
+                sock.send("\n" + "Empty message, nothing has been sent") # we didn't actually get a message from the user to send, bad user!
+    else:
+        # so for simplicity's sake we don't parse the /PRIVMSG command based on white space but everything else we do
+        message = message.split()
+        parse_data2(sock, message)
 
-    # received exit command
-    elif message.find('/exit')==0:
-        logoff(sock) # log user off
+def parse_data2(sock, message):
+    """Function receives data parsed based on whitespace and takes the appropriate action
+    :param sock: socket object
+    :param message: message to dictate action
+    """
+    # take action based on the length of the message
+    if len(message) == 1:
+
+        # received who command
+        if message[0] == '/who':
+            logging.info('%s requested user list' % accounts[sock]['username'])
+            logging.info('Current user list: %s' % USER_LIST)
+            who(sock)
+        
+        # received list command
+        if message[0] == '/list':
+            logging.info('%s requested list of channels' % accounts[sock]['username'])
+            logging.info('Current list of channels: %s' % CHANNEL_LIST)
+            list(sock)
+
+        # received exit command
+        if message[0] == '/exit':
+            logoff(sock) # log user off
+
+    elif len(message) == 2:
+
+        # received a peek command
+        if message[0] == '/peek':
+            peek(sock, message[1])
+
+        # received a join command
+        if message[0] == '/join':
+            logging.info(('%s user wants to join ' + message[1]) % accounts[sock]['username']) # log info for server
+            joinchannel(sock, message[1])                                                      # try to put user in channel
+        
+        # received a leave command
+        if message[0] == '/leave':
+            logging.info(('%s sent request to leave' + message[1]) % accounts[sock]['username']) # log info for server
+            leavechannel(sock, message[1])                                                       # try to take user out of channel
 
     # everything else is...well invalid bitches~!
-    #else:
-    #    logging.info('%s sent invalid command' % accounts[sock]['username'])
-    #    sock.send("\n" + "INVALID COMMAND NIGGUH")
+    else:
+        logging.info('%s sent invalid command' % accounts[sock]['username'])
+        sock.send("\n" + "INVALID COMMAND NIGGUH")
 
 def who(sock):
     """Function shows user other users connected to server
