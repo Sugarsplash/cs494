@@ -1,5 +1,5 @@
 """
- A TCP Chat server programmed in python
+ An IRC server programmed in python
  Note: code has been tested with python version 2.7.9
  Programmed by William Harrington for CS494 Programming Project
 """
