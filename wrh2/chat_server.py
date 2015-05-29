@@ -28,26 +28,43 @@ def parse_data(sock, message):
     :param message: message to parse
     """
     
+    # received who command
     if message.find('/who')==0:
         logging.info('%s requested user list' % accounts[sock]['username'])
         logging.info('%s' % USER_LIST)
         
+    # received joined command
     elif message.find('/join')==0:
         if message[6]:
-            logging.info(('%s user wants to join ' + message[6:]) % accounts[sock]['username'])
-            joinchannel(sock, message[6:])
+            logging.info(('%s user wants to join ' + message[6:]) % accounts[sock]['username']) # log info for server
+            joinchannel(sock, message[6:])                                                      # try to put user in channel
         else:
-            logging.info('%s sent invalid command' % accounts[sock]['username'])
+            logging.info('%s sent invalid command' % accounts[sock]['username'])                # user sent invalid command
+    
+    # received exit command
     elif message.find('/exit')==0:
-        logoff(sock)
+        logoff(sock) # log user off
+
+    # received leave command
     elif message.find('/leave')==0:
+        
+        # make sure we have received a channel name to try and leave
         if message[7]:
-            logging.info(('%s sent request to leave' + message[7:]) % accounts[sock]['username'])
+            logging.info(('%s sent request to leave' + message[7:]) % accounts[sock]['username']) # log info for server
+            leavechannel(sock, message[7:])                                                       # try to take user out of channel
         else:
-            logging.info('%s user sent invalid command' % accounts[sock]['username'])
+            logging.info('%s user sent invalid command' % accounts[sock]['username'])             # user sent invalid command
+
+    # received PRIVMSG command
     elif message.find('/PRIVMSG')==0:
+
+        # check to see that we even actually have a message
         if message[9]:
-            broadcast_data(sock, "\n" + "<" + accounts[sock]['username'] + "> " + message[9:])
+            broadcast_data(sock, "\n" + "<" + accounts[sock]['username'] + "> " + message[9:]) # we have a message so send it
+        else:
+            sock.send("\n" + "Empty message, nothing has been sent") # we didn't actually get a message from the user to send, bad user!
+
+    # everything else is...well invalid bitches~!
     else:
         logging.info('%s sent invalid command' % accounts[sock]['username'])
         sock.send("\n" + "INVALID COMMAND NIGGUH")
@@ -57,7 +74,6 @@ def joinchannel(sock, channel):
     :param sock: socket object
     :param channel: channel name
     """
-    print channel
     if channel in CHANNEL_LIST:
         accounts[sock]['channels'].append(channel) # add channel to user's channels
         accounts[sock]['current'] = channel        # make channel the user's current channel
@@ -69,6 +85,21 @@ def joinchannel(sock, channel):
         sock.send(("\n" + "Joined %s") % channel)  # tell the user their in the channel now
     logging.info('Channel list: %s' % CHANNEL_LIST)    # for the server log
 
+def leavechannel(sock, channel):
+    """Function removes user from channel
+    :param sock: socket object
+    :param channel: channel to leave
+    """
+    # check to see if user is even in that channel
+    if channel in accounts[sock]['channels']:
+        # user has the channel in their channel list, check to see if its their current channel
+        if accounts[sock]['current'] == channel:
+            accounts[sock]['current'] = ''         # reset current channel
+        accounts[sock]['channels'].remove(channel) # remove channel from user's channel list
+        logging.info('%s left %s' % (accounts[sock]['username'], channel))
+        sock.send(("\n"+ "You left %s") % channel)
+    else:
+        sock.send("\n" + "Channel not in channel list" + "\n" + "Must be in a channel to leave it") 
 
 def logoff(sock):
     """Function logs a client off the server
