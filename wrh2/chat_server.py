@@ -73,7 +73,6 @@ def parse_data2(sock, message):
 
     elif len(message) == 2:
 
-        # TODO: Implement whois and switchcurrent
         # receive a whois command
         if message[0] == '/whois':
             whois(sock, message[1])
@@ -106,10 +105,10 @@ def who(sock):
 
     :param sock: socket object
     """
-    # send user list to user
-    sock.send("\n\nUsers currently connected to server\n")
-    for i in range(len(USER_LIST)):        
-        sock.send(USER_LIST[i] + "\n")
+
+    sock.send('\nUsers currently connected to server\n') # prompt
+    user_list = ", ".join(USER_LIST)                     # make string out of USER_LIST array
+    sock.send('%s' % user_list)                          # send string
 
 def list(sock):
     """Function processes list command which shows user list of channels on server
@@ -121,13 +120,11 @@ def list(sock):
 
     # send user list of channels
     if len(CHANNEL_LIST) == 0:
-        sock.send("\n" + "No channels currently on server" + "\n" + "type /join and then a channel name to create one!")
+        sock.send('\nNo channels currently on server\ntype /join and then a channel name to create one!\n')
     else:
-        sock.send("\n\n" + "List of channels on server" + "\n")
-        for i in range(len(CHANNEL_LIST)):
-            sock.send(CHANNEL_LIST[i])
-            sock.send("\n")
-        sock.send("\n")
+        sock.send('\nList of channels on server\n')
+        channel_list = ", ".join(CHANNEL_LIST)
+        sock.send('%s' % channel_list)
 
 def logoff(sock):
     """Function processes exit command which logs a client off the server
