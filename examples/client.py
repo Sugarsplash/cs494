@@ -7,14 +7,17 @@ def prompt():
 
 #main function
 if __name__ == "__main__":
-
-    if(len(sys.argv) < 3) :
-        print 'Usage : python telnet.py hostname port'
+    #Check args supplied by user
+    if(len(sys.argv) < 4) :
+        #Wrong number of args, display usage and exit
+        print 'Usage : python2 client.py hostname port username'
         sys.exit()
 
     host = sys.argv[1]
     port = int(sys.argv[2])
+    username = sys.argv[3]
 
+    #Create TCP socket connection and set timeout
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(2)
 
@@ -25,9 +28,17 @@ if __name__ == "__main__":
         print 'Unable to connect'
         sys.exit()
 
-    print 'Connected to remote host. Start sending messages'
-    prompt()
-
+    print 'Connected to remote host.'
+    
+    #log on with username supplied
+    try:
+        s.send(username)
+    except:
+        #username was not able to log in
+        print 'Unable to log in with credentials provided.'
+        sys.exit()
+    print 'Log in success. Join a room to begin chat.'
+    
     while 1:
         socket_list = [sys.stdin, s]
 
