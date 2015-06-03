@@ -28,33 +28,27 @@ def decipher(client, info):
 	receiver = info[1]
 	message = info[(len('PRIVMSG')+len(receiver)):]
 	PRIVMSG(client, receiver, message)
+    if info[0] == 'ROOMMSG':
+	specified_room = info[1]
+	message = info[len('ROOMMSG'):]
+	ROOMMSG(client, message)
     if info[0] == 'ROOMS':
 	ROOMS(client)
 
 
 
-# This function sends server messages to all currently connected clients
-def shout(client, message):
-    for current_socket in connections:
-	# Make sure that the message isn't sent to the server or the client
-	# that sent the message
-	if current_socket != serv and current_socket != client:
-	    current_socket.send(message)
-
-
-
 # This function displays the names of all the clients in a particular room
 def INROOM(client, specified_room):
-    if len(rooms) == 0				# There are no rooms
+    if len(rooms) == 0# There are no rooms
 	client.send('There are currently no rooms to look into')
     i = 0
-    for current_room in rooms:			# Check rooms
-	if current_room == specified_room:	# Room found
-	    for check in user_info:	# Send usernames in the room
+    for current_room in rooms:# Check rooms
+	if current_room == specified_room:# Room found
+	    for check in user_info:# Send usernames in the room
 		if current_room in user_info[client]['rooms']:
 		    client.send(user_info[client]['username'])
 	    i = 1
-    if i == 0					# The room was not found
+    if i == 0# The room was not found
 	client.send('That room does not exist')
 
 
@@ -66,7 +60,7 @@ def JOIN(client, specified_room):
 	user_info[client]['rooms'].append(specified_room)
 	user_info[client]['current'] = specified_room
 	client.send(('Successfully joined %s') % specified_room)
-    else:				# Room not found, create room instead
+    else:# Room not found, create room instead
 	rooms.append(specified_room)
 	user_info[client]['rooms'].append(specified_room)
 	user_info[client]['current'] = specified_room
@@ -82,8 +76,8 @@ def LEAVE(client, specified_room)
 	if specified_room == user_info[client]['current']:
 	    user_info[client]['current'] = ''
 	user_info[client]['rooms'].remove(specified_room)
-    else:				# Client hasn't joined this room
-	client.send('You have not joined that room or it does not exist')
+    else:# Client hasn't joined this room
+	client.send('You have not joined this room or the room does not exist')
 
 
 
@@ -101,16 +95,27 @@ def LOGOUT(client):
 # This function allows a client to send a private message to another client
 def PRIVMSG(client, receiver, message):
     if receiver in usernames:
-	if receiver in connections:
-	    receiver.send(message)
-    else:		# Username not in server list
+	for current_socket in connections:
+	    if current_socket == receiver
+		current_socket.send(message)
+    else:# Username not in server list
 	client.send('The given username was not found')
+
+
+
+def ROOMMSG(client, specified_room, message):
+    if specified_room in user_info[client]['rooms']:
+	for current_socket in connections:
+	    if specified_room in user_info[current_socket]['rooms']:
+		current_socket.send(message)
+    else:# Client hasn't joined this room to send the message
+	client.send('You have not joined this room or the room does not exist')
 
 
 
 # This function displays all the rooms currently in the server
 def ROOMS(client)
-   if len(rooms) == 0:		# Check if there are rooms on the server
+   if len(rooms) == 0:# Check if there are rooms on the server
 	client.send('There are no rooms on the server')
    else:
 	client.send('Rooms in the server: ')
@@ -142,7 +147,7 @@ while 1:
 							connections, [], [])
 
     for client in input_ready:
-	if client == serv:	# Incoming connection
+	if client == serv:# Incoming connection
 	    clientfd, address = serv.accept()
 	    connections.append(client)
 	    # Set up for acquiring details of user information
@@ -162,7 +167,7 @@ while 1:
 	    else:
 		user_info[clientfd]['username'] = name
 	    user_info[clientfd]['ip'] = address[0]
-	else:				# Incoming message
+	else:# Incoming message
 	    info = client.recv(2048)
 	    if info:
 		decipher(info)		# Interpret message
