@@ -30,7 +30,7 @@ def decipher(client, info):
 	PRIVMSG(client, receiver, message)
     if info[0] == 'ROOMMSG':
 	specified_room = info[1]
-	message = info[len('ROOMMSG'):]
+	message = info[(len('ROOMMSG')+len(specified_room)):]
 	ROOMMSG(client, message)
     if info[0] == 'ROOMS':
 	ROOMS(client)
@@ -39,7 +39,7 @@ def decipher(client, info):
 
 # This function displays the names of all the clients in a particular room
 def INROOM(client, specified_room):
-    if len(rooms) == 0# There are no rooms
+    if len(rooms) == 0:# There are no rooms
 	client.send('There are currently no rooms to look into')
     i = 0
     for current_room in rooms:# Check rooms
@@ -48,8 +48,8 @@ def INROOM(client, specified_room):
 		if current_room in user_info[client]['rooms']:
 		    client.send(user_info[client]['username'])
 	    i = 1
-    if i == 0# The room was not found
-	client.send('That room does not exist')
+    if i == 0:# The room was not found
+	client.send('%s does not exist' % current_room)
 
 
 
@@ -64,12 +64,12 @@ def JOIN(client, specified_room):
 	rooms.append(specified_room)
 	user_info[client]['rooms'].append(specified_room)
 	user_info[client]['current'] = specified_room
-	client.send(('Created %s') % specified_room)
+	client.send('Created %s' % specified_room)
 
 
 
 # This function lets the client leave any room they have previously joined
-def LEAVE(client, specified_room)
+def LEAVE(client, specified_room):
     if specified_room in user_info[client]['rooms']:
 	# If the room the client leaves is the room they're currently in,
 	# make sure to change their current room to no current room
@@ -77,7 +77,8 @@ def LEAVE(client, specified_room)
 	    user_info[client]['current'] = ''
 	user_info[client]['rooms'].remove(specified_room)
     else:# Client hasn't joined this room
-	client.send('You have not joined this room or the room does not exist')
+	client.send('You need to join %s before you can try to leave it'
+							% specified_room)
 
 
 
@@ -96,10 +97,10 @@ def LOGOUT(client):
 def PRIVMSG(client, receiver, message):
     if receiver in usernames:
 	for current_socket in connections:
-	    if current_socket == receiver
+	    if current_socket == receiver:
 		current_socket.send(message)
     else:# Username not in server list
-	client.send('The given username was not found')
+	client.send('The given username "%s" was not found' % receiver)
 
 
 
@@ -109,18 +110,19 @@ def ROOMMSG(client, specified_room, message):
 	    if specified_room in user_info[current_socket]['rooms']:
 		current_socket.send(message)
     else:# Client hasn't joined this room to send the message
-	client.send('You have not joined this room or the room does not exist')
+	client.send('You need to join %s before you can send a message to it'
+							% specified_room)
 
 
 
 # This function displays all the rooms currently in the server
-def ROOMS(client)
+def ROOMS(client):
    if len(rooms) == 0:# Check if there are rooms on the server
 	client.send('There are no rooms on the server')
    else:
 	client.send('Rooms in the server: ')
 	for current_room in rooms:
-	    client.send('%s, 'current_room)
+	    client.send('%s, ' %  current_room)
 
 
 
@@ -158,8 +160,9 @@ while 1:
 		'current': ''		# Keep track of which room client is in
 	    }
 	    # Make sure that the username sent isn't already in the server
+	    name = clientfd.recv(2048).strip()
 	    if name in usernames:
-		client.send('Username in use, log in with another username')
+		client.send('%s in use, log in with another username' % name)
 		LOGOUT(client)
 	    elif ' ' in name:
 		client.send('Please do not use spaces in your username')

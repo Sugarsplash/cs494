@@ -54,12 +54,15 @@ while 1:
 
     # Check where the socket came from
     for current_socket in input_ready:
-	if current_socket == s:		# Socket received from server
+	if current_socket == s:# Socket received from server
 	    info = current_socket.recv(2048)
-	    sys.stdout.write("IRC-SERVER: " + info + "\n")
-	    sys.stdout.flush()
+	    if info == 0:# Server disconnected
+		sys.exit()
+	    else:# Display information received from server
+		sys.stdout.write("IRC-SERVER: " + info + "\n")
+		sys.stdout.flush()
 
-	else:				# Socket received from user
+	else:# Socket received from user
 	    user_message = sys.stdin.readline()
 	    s.send(user_message)
 	    sys.stdout.write("IRC-SERVER: ")
