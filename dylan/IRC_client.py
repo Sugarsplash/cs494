@@ -18,7 +18,7 @@ import sys	# Command line arguments (i.e. argv)
 
 # Check if the user gave the correct number of arguments
 if len(sys.argv) < 4:
-    print "USAGE: IRC_client.py <HOST> <PORT> <USRENAME>";
+    print "USAGE: IRC_client.py <HOST> <PORT> <USERNAME>";
     sys.exit(0)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)	# Create socket
@@ -31,10 +31,19 @@ s.settimeout(3)		# This is needed for checking to see if the connection
 			# is still established (check if server is running)
 
 # Connect to the server
-s.connect((host, port))
+try:
+    s.connect((host, port))
+except:
+    print 'Could not connect to server'
+    sys.exit()
 
 # Now that we're connected, make sure that the server can accept the username
-s.send(username)
+try:
+    s.send(username)
+except:
+    # Username has unsupported characters
+    print 'Server can not process the username: %s' % username
+    sys.exit()
 
 # Give the user a basic prompt interface
 sys.stdout.write("IRC-SERVER: ")
@@ -56,7 +65,8 @@ while 1:
     for current_socket in input_ready:
 	if current_socket == s:# Socket received from server
 	    info = current_socket.recv(2048)
-	    if info == 0:# Server disconnected
+	    if not info:# Server disconnected
+		print 'Disconnected from server'
 		sys.exit()
 	    else:# Display information received from server
 		sys.stdout.write("IRC-SERVER: " + info + "\n")
