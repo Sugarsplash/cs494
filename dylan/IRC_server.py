@@ -13,27 +13,31 @@ import socket	# Networking interface
 
 # This function determines what message the client sent to the server
 def decipher(client, info):
-    if info[0] == 'INROOM':
+    if info[0:6] == 'INROOM':
 	specified_room = info[len('INROOM'):]
 	INROOM(client, specified_room)
-    if info[0] == 'JOIN':
+    elif info[0:4] == 'JOIN':
 	specified_room = info[len('JOIN'):]
 	JOIN(client, specified_room)
-    if info[0] == 'LEAVE':
+    elif info[0:5] == 'LEAVE':
 	specified_room = info[len('LEAVE'):]
 	LEAVE(client, specified_room)
-    if info[0] == 'LOGOUT':
+    elif info[0:6] == 'LOGOUT':
 	LOGOUT(client)
-    if info[0] == 'PRIVMSG':
-	receiver = info[1]
+    elif info[0:7] == 'PRIVMSG':
+	word_array = info.split()
+	receiver = word_array[1]
 	message = info[(len('PRIVMSG')+len(receiver)):]
 	PRIVMSG(client, receiver, message)
-    if info[0] == 'ROOMMSG':
-	specified_room = info[1]
+    elif info[0:7] == 'ROOMMSG':
+	word_array = info.split()
+	specified_room = word_array[1]
 	message = info[(len('ROOMMSG')+len(specified_room)):]
 	ROOMMSG(client, message)
-    if info[0] == 'ROOMS':
+    elif info[0:5] == 'ROOMS':
 	ROOMS(client)
+    else:# User entered an invalid command
+	client.send('Invalid command, refer to README for list of commands')
 
 
 
@@ -150,12 +154,11 @@ while 1:
 
     for client in input_ready:
 	if client == serv:# Incoming connection
-	    clientfd, address = serv.accept()
-	    connections.append(client)
+	    clientfd = serv.accept()
+	    connections.append(clientfd)
 	    # Set up for acquiring details of user information
 	    user_info[clientfd]={
 		'username': '',
-		'ip': '',		# Needed when searching for user info
 		'rooms': [],
 		'current': ''		# Keep track of which room client is in
 	    }
@@ -169,11 +172,15 @@ while 1:
 		LOGOUT(client)
 	    else:
 		user_info[clientfd]['username'] = name
-	    user_info[clientfd]['ip'] = address[0]
+		usernames.append(name)
 	else:# Incoming message
-	    info = client.recv(2048)
-	    if info:
-		decipher(info)		# Interpret message
+	    try:
+		info = client.recv(2048).strip()
+		if info:
+		    decipher(info)		# Interpret message
+	    except:
+		LOGOUT(client)
+		continue
 	
 
 serv.close()
