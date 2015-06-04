@@ -8,6 +8,7 @@
 # Modules
 import select	# Wait for I/O completion
 import socket	# Networking interface
+import sys	# Command line arguments
 
 # Functions
 
@@ -21,13 +22,11 @@ def chat(client, message):
 	client.send('You need to join a room in order to chat')
     else:
 	for current_user in connections:
-	    if current_user != serv:# Make sure we don't send to server
-		if user_info[current_user]['username'] == \
-						user_info[client]['username']:
-		    client.send(message)
-		elif user_info[current_user]['current'] == \
+	    # Make sure we don't send to the server or to the client sending
+	    if current_user != serv and current_user != client:
+		if user_info[current_user]['current'] == \
 						user_info[client]['current']:
-		    current_user.send(('%: ' % user_info[client]['username'])
+		    current_user.send(('%s: ' % user_info[client]['username'])
 								 + message)
 
 
@@ -72,9 +71,10 @@ def INROOM(client, specified_room):
 	i = 0
 	for current_room in rooms:# Check rooms
 	    if current_room == specified_room:# Room found
-		for check in user_info:# Send usernames in the room
-		    if current_room in user_info[client]['rooms']:
-			client.send(user_info[client]['username'])
+		for current_user in connections:# Send usernames in the room
+		    if current_user != serv:# Don't send to server
+			if current_room in user_info[current_user]['rooms']:
+			    client.send(user_info[client]['username'])
 		i = 1
 	if i == 0:# The room was not found
 	    client.send('%s does not exist' % current_room)
@@ -148,8 +148,10 @@ def PRIVMSG(client, receiver, message):
 		'other commands to the server (form: USERNAME <username>')
     elif receiver in usernames:
 	for current_user in connections:
-	    if current_user == receiver:
-		current_user.send(message)
+	    if user_info[current_user]['username'] == \
+					user_info[receiver]['username']:
+		current_user.send(('%s ' % user_info[client]['username'])
+								 + message)
     else:# Username not in server list
 	client.send('The given username "%s" was not found' % receiver)
 
@@ -204,8 +206,9 @@ serv.listen(5)			# listen for clients
 
 # The server needs to be added as one of the connections
 connections.append(serv)
+running = 1;
 
-while 1:
+while running:
     # Check if any input sockets are ready (output and exception not used)
     input_ready, output_dummy, exception_dummy = select.select(
 							connections, [], [])
@@ -220,6 +223,10 @@ while 1:
 		'rooms': [],
 		'current': ''		# Keep track of which room client is in
 	    }
+	elif client == sys.stdin:
+	    # Close the server if any input is entered
+	    junk = sys.stdin.readline()
+	    running = 0
 	else:# Incoming message
 	    try:
 		info = client.recv(2048)
