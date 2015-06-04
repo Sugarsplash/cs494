@@ -6,7 +6,7 @@
 
 import socket   # for socket objects
 import select   # for select function
-import string   # for string stuff
+import signal   # for signal interrupt
 import sys      # for handling command line arguments
 
 def prompt() :
@@ -18,13 +18,27 @@ def prompt() :
     sys.stdout.write("->") # prompt user
     sys.stdout.flush()     # flush buffer
 
+
+def signal_handler(signal, frame):
+    """Function handles signal interrupt (CTRL-C)
+    
+    :param signal: signal caught
+    :param frame: current stack frame
+    """
+    s.send('/exit')
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, signal_handler)
+
+
 if __name__ == "__main__":
     """Main function
 
     """
     
     # user supplied the wrong amount of arguments
-    if(len(sys.argv) < 3) :
+    if(len(sys.argv) < 4):
         # show proper usage and exit program
         print 'Usage : python chat_client.py hostname port username'
         sys.exit()
@@ -37,9 +51,9 @@ if __name__ == "__main__":
     s.settimeout(2)                                       # set timeout to 2 seconds
     
     # connect to remote host
-    try :
+    try:
         s.connect((host, port))
-    except :
+    except:
         print 'Unable to connect'
         sys.exit()
 

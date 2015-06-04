@@ -6,9 +6,16 @@
 import socket  # for socket objects
 import select  # for select function
 import logging # for logging
+import signal  # for signal interrupts
+import sys
 
 def broadcast_data (sock, message):
     """Function to broadcast chat messages to all connected clients
+        
+    This function sends a message to clients connected to the server
+    Messages are sent according to the current channel that the sender is in
+    This means that only clients whose current channel is the same as
+    The sender will receive the message
 
     :param sock: socket object
     :param message: message to send
@@ -28,9 +35,13 @@ def broadcast_data (sock, message):
 def parse_data(sock, message):
     """Function to parse the data received and perform the appropriate action
 
+    This function really only takes care of /PRIVMSG commands
+    Everything else is passed on to parse_data2
+
     :param sock: socket object
     :param message: message to parse
     """
+    
     # received PRIVMSG command, check for this first because the other commands are parsed based on white space while this one is not
     if message.find('/PRIVMSG')==0:
         # check to see that we even actually have a message
@@ -49,56 +60,149 @@ def parse_data(sock, message):
 def parse_data2(sock, message):
     """Function receives data parsed based on whitespace and takes the appropriate action
 
+    The majority of messages pass through this function
+    (the only exception being /PRIVMSG commands)
+    Therefore it is very important to server operation
+
     :param sock: socket object
     :param message: message to dictate action
     """
     # take action based on the length of the message
     if len(message) == 1:
 
+        # received help command
+        if message[0] == '/help':
+            # general help command, lists all commands
+            help(sock, command=None)
+
         # received who command
-        if message[0] == '/who':
-            logging.info('%s requested user list' % accounts[sock]['username'])
-            logging.info('Current user list: %s' % USER_LIST)
+        elif message[0] == '/who':
             who(sock)
         
         # received list command
-        if message[0] == '/list':
-            logging.info('%s requested list of channels' % accounts[sock]['username'])
-            logging.info('Current list of channels: %s' % CHANNEL_LIST)
+        elif message[0] == '/list':
             list(sock)
 
         # received exit command
-        if message[0] == '/exit':
-            logoff(sock) # log user off
+        elif message[0] == '/exit':
+            logoff(sock)
+
+        # everything else is invalid
+        else:
+            sock.send('\nInvalid command\n')
 
     elif len(message) == 2:
 
+        # received help command
+        if message[0] == '/help':
+            help(sock, message[1])
+
         # receive a whois command
-        if message[0] == '/whois':
+        elif message[0] == '/whois':
             whois(sock, message[1])
 
         # received a peek command
-        if message[0] == '/peek':
+        elif message[0] == '/peek':
             peek(sock, message[1])
 
         # received a join command
-        if message[0] == '/join':
-            logging.info(('%s user wants to join ' + message[1]) % accounts[sock]['username']) # log info for server
-            joinchannel(sock, message[1])                                                      # try to put user in channel
-        
+        elif message[0] == '/join':
+            joinchannel(sock, message[1])
+
         # received a leave command
-        if message[0] == '/leave':
-            logging.info(('%s sent request to leave' + message[1]) % accounts[sock]['username']) # log info for server
-            leavechannel(sock, message[1])                                                       # try to take user out of channel
+        elif message[0] == '/leave':
+            leavechannel(sock, message[1])
 
         # received a current command
-        if message[0] == '/current':
+        elif message[0] == '/current':
             switchcurrent(sock, message[1])
 
-    # everything else is...well invalid bitches~!
+        # everything else is invalid
+        else:
+            sock.send('\nInvalid command\n')
+
+    # everything else is invalid
     else:
-        logging.info('%s sent invalid command' % accounts[sock]['username'])
-        sock.send("\n" + "INVALID COMMAND NIGGUH")
+        sock.send('\nInvalid command\n')
+
+
+def help(sock, command):
+    """Function processes help command which shows user list of commands
+        If command is supplied, specific info about command is sent to client
+        
+        :param sock: socket object
+        :param command: option argument shows specific info for command
+        """
+    
+    if command is None:
+        sock.send('\nList of commands\n')
+        sock.send('/help -- shows valid commands\n')
+        sock.send('/who -- shows users on server\n')
+        sock.send('/list -- shows channels on server\n')
+        sock.send('/exit -- logoff\n')
+        sock.send('/whois <username> -- info about user\n')
+        sock.send('/peek <channel> -- shows users in channel\n')
+        sock.send('/join <channel> -- join channel\n')
+        sock.send('/leave <channel> -- leave channel\n')
+        sock.send('/current <channel> -- change current channel\n')
+        sock.send('/help <command> -- more info on command\n')
+    else:
+        if command == 'who':
+            sock.send('\nCommand: /who\n')
+            sock.send('Arguments: none\n')
+            sock.send('Description: The who command will show you all the users on the server\n')
+
+        elif command == 'list':
+            sock.send('\nCommand: /list\n')
+            sock.send('Arguments: none\n')
+            sock.send('Description: The list command will show you a list of the current channels on the server\n')
+        
+        elif command == 'exit':
+            sock.send('\nCommand: /exit\n')
+            sock.send('Arguments: none\n')
+            sock.send('Description: The exit command will log you off the server\n')
+        
+        elif command == 'whois':
+            sock.send('\nCommand: /whois\n')
+            sock.send('Arguments: <username> (a username, not optional)\n')
+            sock.send('Description: The whois command will display basic info about the user specified with <username>\n')
+            sock.send('Ex: /whois billy\n')
+        
+        elif command == 'peek':
+            sock.send('\nCommand: /peek\n')
+            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Description: The peek command will show you a list of users in <channel>\n')
+            sock.send('Ex: /peek #channel_one\n')
+        
+        elif command == 'join':
+            sock.send('\nCommand: /join\n')
+            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Description: The join command will place you in the channel specified with <channel>\n')
+            sock.send('If the channel does not exist yet, it will be created\n')
+            sock.send('By default the most recent channel you have join becomes your current channel\n')
+            sock.send('Channel names must start with # and contain no spaces or other illegal characters\n')
+            sock.send('Ex: /join #channel_one\n')
+        
+        elif command == 'leave':
+            sock.send('\nCommand: /leave\n')
+            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Description: The leave command will take you out of the channel specified by <channel>\n')
+            sock.send('You must be in a channel in order to leave it.\n')
+            sock.send('If you are the last person in the channel, once you leave it will be deleted\n')
+            sock.send('Ex: /leave #channel_one\n')
+        
+        elif command == 'current':
+            sock.send('\nCommand: /current\n')
+            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Description: The current command will switch your current channel\n')
+            sock.send('You must be in the channel specified by <channel>\n')
+            sock.send('Ex: /current #channel_one\n')
+        
+        else:
+            sock.send('\nSpecified command does not exist.')
+            sock.send(' Type /help for list of commands\n')
+
+
 
 def who(sock):
     """Function processes who command which shows user other users connected to server
@@ -110,6 +214,7 @@ def who(sock):
     user_list = ", ".join(USER_LIST)                     # make string out of USER_LIST array
     sock.send('%s' % user_list)                          # send string
 
+
 def list(sock):
     """Function processes list command which shows user list of channels on server
     If no channels are currently on the server then the user is prompted
@@ -118,50 +223,95 @@ def list(sock):
     :param sock: socket object
     """
 
-    # send user list of channels
+    # channel list is 0 so no channels
     if len(CHANNEL_LIST) == 0:
-        sock.send('\nNo channels currently on server\ntype /join and then a channel name to create one!\n')
+        sock.send('\nNo channels currently on server\n')
+    
+    # channel list is not 0 so send the list
     else:
+        # prompt the client
         sock.send('\nList of channels on server\n')
+        
+        # grab the channel list which is an array
+        # and turn it a string
         channel_list = ", ".join(CHANNEL_LIST)
+        
+        # send string off to client
         sock.send('%s' % channel_list)
+
 
 def logoff(sock):
     """Function processes exit command which logs a client off the server
+        
+    First this function tells everyone what is going on
+    Second it removes the client from each channel they are in
+    Third it removes user from list
+    Fourth it closes the socket and removes it from connection list
 
     :param sock: socket object
     """
-    broadcast_data(sock, "\n" + "%s has gone offline" % accounts[sock]['username']) #tell everyone what is going on
+    
+    # tell everyone that someone is leaving
+    broadcast_data(sock, '\n%s has gone offline' % accounts[sock]['username'])
     
     # Remove user from all the channels that they are currently in
     for i in range(len(accounts[sock]['channels'])):
         leavechannel(sock,accounts[sock]['channels'][i])
-              
-    logging.info('%s is offline' % accounts[sock]['username']) #for the server log
-    USER_LIST.remove(accounts[sock]['username']) #remove client from user list
-    sock.close() #close the socket
-    CONNECTION_LIST.remove(sock) #remove socket from connection list
+
+    # for the server log
+    logging.info('%s is offline' % accounts[sock]['username'])
+
+    # check to see if we even had a user name
+    if len(accounts[sock]['username']) > 0:
+        # remove client from user list
+        USER_LIST.remove(accounts[sock]['username'])
+    
+    # close the socket
+    sock.close()
+    
+    # remove socket from connection list
+    CONNECTION_LIST.remove(sock)
+
 
 def whois(sock, username):
-    """Function processes a whois command which reveals information about a specific username
+    """Function processes a whois command
+    which reveals info about a specific username
 
     :param sock: socket object
     :param username: user to look up
     """
 
+    # check to see if username exists
     if username in USER_LIST:
+
+        # it does so lets find the socket
+        # that is associated with that username
         for key in accounts:
             if accounts[key]['username'] == username:
-                socket = key
-                break
+                socket = key  # store socket object
+                break  # break out of for loop
+    
+        # send client some info on this socket
         sock.send('\nUser: %s [%s]' % (username, accounts[socket]['ip']))
+        
+        # check to see if this socket is in any channels
         if len(accounts[socket]['channels']) > 0:
+            # grab the array of channels
+            # associated with the socket
+            # and turn it into a string
             channel_list = ",".join(accounts[socket]['channels'])
+            
+            # send client the channels
             sock.send('\nChannels: %s\n' % channel_list)
+                
+        # socket is not in any channels
         else:
             sock.send('\n%s is currently not in any channels' % username)
+
+    # username doesn't exist
     else:
         sock.send('\n%s not currently connected to server' % username)
+
 
 def joinchannel(sock, channel):
     """Function processes join command which joins user to channel
@@ -169,18 +319,49 @@ def joinchannel(sock, channel):
     :param sock: socket object
     :param channel: channel name
     """
+    
+    user = accounts[sock]['username']
+    
     if channel in CHANNEL_LIST:
-        accounts[sock]['channels'].append(channel) # add channel to user's channels
-        accounts[sock]['current'] = channel        # make channel the user's current channel
-        sock.send(("\n" + "Joined %s") % channel)
-        broadcast_data(sock, ('\n%s joined %s\n') % (accounts[sock]['username'], channel)) #tell everyone someone has arrived
+        # add channel to user's channels
+        accounts[sock]['channels'].append(channel)
+        
+        # make channel the user's current channel
+        accounts[sock]['current'] = channel
+        
+        # notify client
+        sock.send('\nJoined %s\n' % channel)
+        
+        # tell everyone someone has arrived
+        broadcast_data(sock, ('\n%s joined %s\n') % (user, channel))
+    
     else:
-        CHANNEL_LIST.append(channel)               # create channel by adding it to the channel list
-        accounts[sock]['channels'].append(channel) # add channel to user's channels
-        accounts[sock]['current'] = channel        # make channel the user's current channel
-        sock.send(("\n" + "Joined %s") % channel)
-        broadcast_data(sock, ('\n' + '%s joined %s' + '\n') % (accounts[sock]['username'], channel)) #tell everyone someone has arrived
-    logging.info('Channel list: %s' % CHANNEL_LIST)# for the server log
+        # make sure channel starts with # character
+        if channel.find('#') == 0:
+            # create channel by adding it to the channel list
+            CHANNEL_LIST.append(channel)
+            
+            # add channel to user's channels
+            accounts[sock]['channels'].append(channel)
+            
+            # make channel the user's current channel
+            accounts[sock]['current'] = channel
+            
+            # notify client
+            sock.send('\nJoined %s' % channel)
+            
+            # tell everyone someone has arrived
+            broadcast_data(sock, ('\n%s joined %s\n') % (user, channel))
+            
+            
+            # for the server logs
+            logging.info('New channel: %s' % channel)
+            logging.info('Updated channel list: %s' % CHANNEL_LIST)
+        
+        # invalid channel name, no bueno
+        else:
+            sock.send('\nInvalid channel name\n')
+            sock.send('\nSee /help join\n')
 
 def leavechannel(sock, channel):
     """Function processes exit command which removes user from channel
@@ -200,11 +381,11 @@ def leavechannel(sock, channel):
         if accounts[sock]['current'] == channel:
             accounts[sock]['current'] = ''         # reset current channel
         accounts[sock]['channels'].remove(channel) # remove channel from user's channel list
-        logging.info('%s left %s' % (accounts[sock]['username'], channel))
-        sock.send(("\n" + "You left %s") % channel)
+        sock.send('\nYou left %s\n' % channel)
 
     else:
-        sock.send("\n" + "Channel not in channel list" + "\n" + "Must be in a channel to leave")
+        sock.send('\nNot in channel\nMust be in a channel to leave\n')
+
 
 def peek(sock, channel):
     """Function processes peek command which shows user who is in a specific channel
@@ -213,21 +394,35 @@ def peek(sock, channel):
     :param channel: channel to check
     """
 
+    users_in_channel = []
+    
     # No channels yet
     if len(CHANNEL_LIST) == 0:
-        sock.send("\n" + "No channels currently on server" + "\n" + "type /join and then a channel name to create one!")
+        sock.send('\nNo channels currently on server\n')
+
     # We have channels to peek at
     else:
         # check if channel is in the list
         if channel in CHANNEL_LIST:
+            
             # it is so tell the user who is in there
             sock.send("\nUsers in %s\n" % channel)
+            
+            # go through the accounts
             for key in accounts:
+                # if channel listed in account, store it in array
                 if channel in accounts[key]['channels']:
-                    sock.send(accounts[key]['username'] + "\n")
+                    users_in_channel.append(accounts[key]['username'])
+        
+            # turn array into string
+            users_in_channel = ", ".join(users_in_channel)
+
+            # send info to client who requested it
+            sock.send('%s' % users_in_channel)
+
         # uh oh channel not in the list
         else:
-            sock.send("Channel not in channel list")
+            sock.send('\nChannel not in channel list\n')
 
 def switchcurrent(sock, channel):
     """Function processes a current command which allows a user to switch current channel
@@ -240,7 +435,22 @@ def switchcurrent(sock, channel):
     if channel in accounts[sock]['channels']:
         accounts[sock]['current'] = channel # switch current channel
     else:
-        sock.send('\nCurrently not in %s\nMust be in channel to make it current channel\n' % channel)
+        sock.send('\nCurrently not in %s\nMust be in channel\n' % channel)
+
+
+def signal_handler(signal, frame):
+    """Function handles signal interrupt (CTRL-C)
+        
+    :param signal: signal caught
+    :param frame: current stack frame
+    """
+    
+    logging.info('Server shutting down')
+    sys.exit(0)
+
+
+# initialize signal handler
+signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == "__main__":
     """Main function
@@ -254,7 +464,7 @@ if __name__ == "__main__":
     USER_LIST = []       # list to keep track of usernames
     CONNECTION_LIST = [] # list to keep track of socket descriptors
     CHANNEL_LIST = []    # array to keep track of channels
-    RECV_BUFFER = 4096   # Receive buffer, Advisable to keep it as an exponent of 2
+    RECV_BUFFER = 4096   # Receive buffer
     PORT = 6667          # Server port number
     
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    # create TCP socket
@@ -270,7 +480,7 @@ if __name__ == "__main__":
 
     while 1:
         # Get the list sockets which are ready to be read through select
-        read_sockets,write_sockets,error_sockets = select.select(CONNECTION_LIST,[],[])
+        read_sockets, write_sockets, error_sockets = select.select(CONNECTION_LIST, [], [])
         
         for sock in read_sockets:
             #New connection
@@ -291,13 +501,9 @@ if __name__ == "__main__":
                 accounts[sockfd]['ip'] = addr[0] # store IP address
 
                 #get the client's username
-                while 1:
-                    name = sockfd.recv(RECV_BUFFER).strip()
-                    if name in USER_LIST:
-                        print "Username already in use"
-                    else:
-                        accounts[sockfd]['username']=name
-                        break
+                name = sockfd.recv(RECV_BUFFER).strip()
+
+                accounts[sockfd]['username']=name
                 USER_LIST.append(accounts[sockfd]['username']) #Add to user list
                 logging.info('Client (%s, %s) connected' % addr) #log some information
                 logging.info('Client is know as %s, added to the user list' % accounts[sockfd]['username']) #log some information
