@@ -56,8 +56,8 @@ while 1:
     for current_socket in input_ready:
 	if current_socket == s:# Socket received from server
 	    info = current_socket.recv(2048)
-	    if not info:# Server disconnected
-		print 'Disconnected from server'
+	    if info == '':# Server disconnected
+		print 'Server Disconnected'
 		sys.exit()
 	    else:# Display information received from server
 		sys.stdout.write("IRC-SERVER: " + info + "\n")
