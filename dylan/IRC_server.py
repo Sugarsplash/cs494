@@ -11,31 +11,42 @@ import socket	# Networking interface
 
 # Functions
 
+# This function checks to see if the client has a username in the server
+def check_registration(client):
+    if user_info[client]['username'] == '':
+	client.send('Please create a username before submitting any '
+		'other commands to the server (form: USERNAME <username>')
+
 # This function determines what message the client sent to the server
-def decipher(client, info):
-    if info[0:6] == 'INROOM':
-	specified_room = info[len('INROOM'):]
+def decipher(client):
+    if info[0:8] != 'USERNAME':
+	check_registration(client, info)
+    elif info[0:6] == 'INROOM':
+	specified_room = info[len('INROOM '):]
 	INROOM(client, specified_room)
     elif info[0:4] == 'JOIN':
-	specified_room = info[len('JOIN'):]
+	specified_room = info[len('JOIN '):]
 	JOIN(client, specified_room)
     elif info[0:5] == 'LEAVE':
-	specified_room = info[len('LEAVE'):]
+	specified_room = info[len('LEAVE '):]
 	LEAVE(client, specified_room)
     elif info[0:6] == 'LOGOUT':
 	LOGOUT(client)
     elif info[0:7] == 'PRIVMSG':
 	word_array = info.split()
 	receiver = word_array[1]
-	message = info[(len('PRIVMSG')+len(receiver)):]
+	message = info[(len('PRIVMSG ')+len(receiver + ' ')):]
 	PRIVMSG(client, receiver, message)
     elif info[0:7] == 'ROOMMSG':
 	word_array = info.split()
 	specified_room = word_array[1]
-	message = info[(len('ROOMMSG')+len(specified_room)):]
+	message = info[(len('ROOMMSG')+len(specified_room + ' ')):]
 	ROOMMSG(client, message)
     elif info[0:5] == 'ROOMS':
 	ROOMS(client)
+    elif info[0:8] == 'USERNAME':
+	name = info[len('USERNAME '):]
+	USERNAME(client, name)
     else:# User entered an invalid command
 	client.send('Invalid command, refer to README for list of commands')
 
@@ -130,6 +141,20 @@ def ROOMS(client):
 
 
 
+# This function allows a client to create or change their username
+def USERNAME(client, name):
+	if name in usernames:
+	    client.send('The name "%s" is already in use, please try '
+						'another username' % name)
+	elif ' ' in name:
+	    client.send('Please do not use spaces in your username')
+	else:
+	    user_info[client]['username'] = name
+	    usernames.append(name)
+    
+
+
+
 ###############################################################################
 
 # Main program
@@ -162,17 +187,6 @@ while 1:
 		'rooms': [],
 		'current': ''		# Keep track of which room client is in
 	    }
-	    # Make sure that the username sent isn't already in the server
-	    name = clientfd.recv(2048).strip()
-	    if name in usernames:
-		client.send('%s in use, log in with another username' % name)
-		LOGOUT(client)
-	    elif ' ' in name:
-		client.send('Please do not use spaces in your username')
-		LOGOUT(client)
-	    else:
-		user_info[clientfd]['username'] = name
-		usernames.append(name)
 	else:# Incoming message
 	    try:
 		info = client.recv(2048).strip()

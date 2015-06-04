@@ -13,19 +13,18 @@ import sys	# Command line arguments (i.e. argv)
 
 # User should supply the name of the program followed by the hostname (name of
 # the server), the port number, and then their username.
-# USAGE:	IRC_client.py <HOST> <PORT> <USERNAME>
-# EXAMPLE:	IRC_client.py ubuntu 1.2.3.4 my_username
+# USAGE:	IRC_client.py <HOST> <PORT>
+# EXAMPLE:	IRC_client.py ubuntu 1.2.3.4
 
 # Check if the user gave the correct number of arguments
-if len(sys.argv) < 4:
-    print "USAGE: IRC_client.py <HOST> <PORT> <USERNAME>";
+if len(sys.argv) != 3:
+    print "USAGE: IRC_client.py <HOST> <PORT>";
     sys.exit(0)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)	# Create socket
 
 host = sys.argv[1]	# IRC server address
 port = int(sys.argv[2])	# IRC server port number
-username = sys.argv[3]	# Name of the user
 
 s.settimeout(3)		# This is needed for checking to see if the connection
 			# is still established (check if server is running)
@@ -35,14 +34,6 @@ try:
     s.connect((host, port))
 except:
     print 'Could not connect to server'
-    sys.exit()
-
-# Now that we're connected, make sure that the server can accept the username
-try:
-    s.send(username)
-except:
-    # Username has unsupported characters
-    print 'Server can not process the username: %s' % username
     sys.exit()
 
 # Give the user a basic prompt interface
