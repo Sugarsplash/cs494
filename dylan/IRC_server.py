@@ -17,16 +17,16 @@ def chat(client, message):
     # Check to see if the client has a username in the server
     if len(user_info[client]['username']) == 0:
 	client.send('Please create a username before submitting any '
-		'other commands to the server (form: USERNAME <username>')
+		'other commands to the server (form: USERNAME <username>)\n')
     elif len(user_info[client]['rooms']) == 0:
-	client.send('You need to join a room in order to chat')
+	client.send('You need to join a room in order to chat\n')
     else:
 	for current_user in connections:
 	    # Make sure we don't send to the server or to the client sending
 	    if current_user != serv and current_user != client:
 		if user_info[current_user]['current'] == \
 						user_info[client]['current']:
-		    current_user.send(('%s: ' % user_info[client]['username'])
+		    current_user.send(('\n###%s' % user_info[client]['username'])
 								 + message)
 
 
@@ -64,18 +64,17 @@ def INROOM(client, specified_room):
     # Check to see if the client has a username in the server
     if len(user_info[client]['username']) == 0:
 	client.send('Please create a username before submitting any '
-		'other commands to the server (form: USERNAME <username>')
+		'other commands to the server (form: USERNAME <username>)\n')
     else:
 	if len(rooms) == 0:# There are no rooms
 	    client.send('There are currently no rooms to look into')
 	i = 0
-	for current_room in rooms:# Check rooms
-	    if current_room == specified_room:# Room found
-		for current_user in connections:# Send usernames in the room
-		    if current_user != serv:# Don't send to server
-			if current_room in user_info[current_user]['rooms']:
-			    client.send(user_info[client]['username'])
-		i = 1
+	if specified_room in rooms:# Check rooms
+	    i = 1
+	    for current_user in connections:# Send usernames in the room
+		if current_user != serv:# Don't send to server
+		    if specified_room in user_info[current_user]['rooms']:
+			client.send(user_info[current_user]['username'])
 	if i == 0:# The room was not found
 	    client.send('%s does not exist' % current_room)
 
@@ -88,8 +87,9 @@ def JOIN(client, specified_room):
     # Check to see if the client has a username in the server
     if len(user_info[client]['username']) == 0:
 	client.send('Please create a username before submitting any '
-		'other commands to the server (form: USERNAME <username>')
-	client.send('You are already in that room')
+		'other commands to the server (form: USERNAME <username>)\n')
+    elif ' ' in specified_room:# Rooms can't have spaces in them
+	client.send('Sorry, rooms can not have any spaces in them\n')
     elif specified_room in rooms:
 	if specified_room not in user_info[client]['rooms']:
 	    user_info[client]['rooms'].append(specified_room)
@@ -108,7 +108,7 @@ def LEAVE(client, specified_room):
     # Check to see if the client has a username in the server
     if len(user_info[client]['username']) == 0:
 	client.send('Please create a username before submitting any '
-		'other commands to the server (form: USERNAME <username>')
+		'other commands to the server (form: USERNAME <username>)\n')
     elif specified_room in user_info[client]['rooms']:
 	# If the room the client leaves is the room they're currently in,
 	# make sure to change their current room to no current room
@@ -116,7 +116,7 @@ def LEAVE(client, specified_room):
 	    user_info[client]['current'] = ''
 	user_info[client]['rooms'].remove(specified_room)
     else:# Client hasn't joined this room
-	client.send('You need to join %s before you can try to leave it'
+	client.send('You need to join %s before you can try to leave it\n'
 							% specified_room)
 
 
@@ -126,7 +126,7 @@ def LOGOUT(client):
     # Check to see if the client has a username in the server
     if len(user_info[client]['username']) == 0:
 	client.send('Please create a username before submitting any '
-		'other commands to the server (form: USERNAME <username>')
+		'other commands to the server (form: USERNAME <username>)\n')
     # Remove the user from any rooms previously joined
     else:
 	if len(user_info[client]['rooms']) != 0:
@@ -145,15 +145,15 @@ def PRIVMSG(client, receiver, message):
     # Check to see if the client has a username in the server
     if len(user_info[client]['username']) == 0:
 	client.send('Please create a username before submitting any '
-		'other commands to the server (form: USERNAME <username>')
+		'other commands to the server (form: USERNAME <username>)\n')
     elif receiver in usernames:
 	for current_user in connections:
-	    if user_info[current_user]['username'] == \
-					user_info[receiver]['username']:
-		current_user.send(('%s ' % user_info[client]['username'])
+	    if current_user != serv:# Don't send to server
+		if user_info[current_user]['username'] == receiver:
+		    current_user.send(('%s ' % user_info[client]['username'])
 								 + message)
     else:# Username not in server list
-	client.send('The given username "%s" was not found' % receiver)
+	client.send('The given username "%s" was not found\n' % receiver)
 
 
 
@@ -162,13 +162,13 @@ def ROOMS(client):
     # Check to see if the client has a username in the server
     if len(user_info[client]['username']) == 0:
 	client.send('Please create a username before submitting any '
-		'other commands to the server (form: USERNAME <username>')
+		'other commands to the server (form: USERNAME <username>)\n')
     elif len(rooms) == 0:# Check if there are rooms on the server
-	client.send('There are no rooms on the server')
+	client.send('There are no rooms on the server\n')
     else:
 	client.send('Rooms in the server: ')
 	for current_room in rooms:
-	    client.send('%s, ' %  current_room)
+	    client.send('%s' %  current_room)
 
 
 
@@ -178,14 +178,15 @@ def USERNAME(client, name):
 	    client.send('The name "%s" is already in use, please try '
 						'another username' % name)
 	elif len(name) == 0:
-	    client.send('Your username can not be empty')
+	    client.send('Your username can not be empty\n')
 	elif ' ' in name:
-	    client.send('Please do not use spaces in your username')
+	    client.send('Please do not use spaces in your username\n')
 	else:
 	    if user_info[client]['username'] != '':
 		usernames.remove(user_info[client]['username'])
 	    user_info[client]['username'] = name
 	    usernames.append(name)
+	    client.send('Your username is now: %s' % name)
     
 
 
@@ -227,6 +228,8 @@ while running:
 	    # Close the server if any input is entered
 	    junk = sys.stdin.readline()
 	    running = 0
+	    serv.close()
+	    sys.exit()
 	else:# Incoming message
 	    try:
 		info = client.recv(2048)

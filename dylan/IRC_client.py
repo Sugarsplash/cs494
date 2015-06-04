@@ -60,7 +60,7 @@ while 1:
 		print 'Server Disconnected'
 		sys.exit()
 	    else:# Display information received from server
-		sys.stdout.write(info + "\n" + "IRC-SERVER: ")
+		sys.stdout.write(info + "IRC-SERVER: ")
 		sys.stdout.flush()
 
 	else:# Socket received from user
