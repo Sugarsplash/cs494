@@ -18,7 +18,7 @@ def check_registration(client):
 		'other commands to the server (form: USERNAME <username>')
 
 # This function determines what message the client sent to the server
-def decipher(client):
+def decipher(client, info):
     if info[0:8] != 'USERNAME':
 	check_registration(client, info)
     elif info[0:6] == 'INROOM':
@@ -102,7 +102,8 @@ def LOGOUT(client):
     # Remove the user from any rooms previously joined
     for i in range(len(user_info[client]['rooms'])):
 	LEAVE(client, user_info[client]['rooms'][i])
-    usernames.remove(user_info[client]['username'])# Remove client username
+    if user_info[client]['username'] != '':
+	usernames.remove(user_info[client]['username'])# Remove client username
     client.close()		# Close client connection
     connections.remove(client)	# Remove client socket from connections
 
@@ -179,7 +180,7 @@ while 1:
 
     for client in input_ready:
 	if client == serv:# Incoming connection
-	    clientfd = serv.accept()
+	    clientfd, address = serv.accept()
 	    connections.append(clientfd)
 	    # Set up for acquiring details of user information
 	    user_info[clientfd]={
@@ -189,9 +190,9 @@ while 1:
 	    }
 	else:# Incoming message
 	    try:
-		info = client.recv(2048).strip()
+		info = client.recv(2048)
 		if info:
-		    decipher(info)		# Interpret message
+		    decipher(client, info)		# Interpret message
 	    except:
 		LOGOUT(client)
 		continue
