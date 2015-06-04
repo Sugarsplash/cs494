@@ -9,9 +9,10 @@ import logging # for logging
 import signal  # for signal interrupts
 import sys
 
+
 def broadcast_data (sock, message):
     """Function to broadcast chat messages to all connected clients
-        
+   
     This function sends a message to clients connected to the server
     Messages are sent according to the current channel that the sender is in
     This means that only clients whose current channel is the same as
@@ -41,7 +42,7 @@ def parse_data(sock, message):
     :param sock: socket object
     :param message: message to parse
     """
-    
+
     # received PRIVMSG command, check for this first because the other commands are parsed based on white space while this one is not
     if message.find('/PRIVMSG')==0:
         # check to see that we even actually have a message
@@ -57,6 +58,7 @@ def parse_data(sock, message):
         message = message.split()
         parse_data2(sock, message)
 
+
 def parse_data2(sock, message):
     """Function receives data parsed based on whitespace and takes the appropriate action
 
@@ -67,6 +69,7 @@ def parse_data2(sock, message):
     :param sock: socket object
     :param message: message to dictate action
     """
+
     # take action based on the length of the message
     if len(message) == 1:
 
@@ -382,6 +385,15 @@ def leavechannel(sock, channel):
             accounts[sock]['current'] = ''         # reset current channel
         accounts[sock]['channels'].remove(channel) # remove channel from user's channel list
         sock.send('\nYou left %s\n' % channel)
+
+        # check to see if we should remove
+        # from the channel list
+        count = 0
+        for key in accounts:
+            if channel in accounts[key]['channels']:
+                count += 1
+        if count == 0:
+            CHANNEL_LIST.remove(channel)
 
     else:
         sock.send('\nNot in channel\nMust be in a channel to leave\n')
