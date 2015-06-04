@@ -394,6 +394,8 @@ def leavechannel(sock, channel):
                 count += 1
         if count == 0:
             CHANNEL_LIST.remove(channel)
+            logging.info('%s removed from channel list' % channel)
+            logging.info('Updated channel list: %s' % CHANNEL_LIST)
 
     else:
         sock.send('\nNot in channel\nMust be in a channel to leave\n')
