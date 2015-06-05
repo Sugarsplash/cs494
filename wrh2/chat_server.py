@@ -22,15 +22,58 @@ def broadcast_data (sock, message):
     :param message: message to send
     """
 
+    if accounts[sock]['current'] == '':
+        return
+
     #Do not send the message to master socket and the client who has send us the message
     for socket in CONNECTION_LIST:
-        if socket != server_socket and socket != sock :
+        if socket != server_socket and socket != sock:
             if accounts[socket]['current'] == accounts[sock]['current']:
                 # try to send the message, if we can't send socket timed out so log client off
                 try :
                     socket.send(message)
                 except :
                     logoff(socket)
+
+
+def privatemsg(sock, msg):
+    """Function handles msg command
+    which allows user to send private messages
+
+    :param sock: socket object
+    :param msg: message to send
+    """
+
+    # split the msg string into array of strings
+    # then grab the piece at index 1
+    user = msg.split()[1]
+
+    # take everything after the user name
+    # turn it into msg2send string
+    msg2send = msg[5+len(user):]
+
+    # check to see if that username is
+    # in the user list
+    if user in USER_LIST:
+
+        # go through the accounts
+        for key in accounts:
+
+            # find the specified user
+            if accounts[key]['username'] == user:
+
+                # try sending the private message
+                try:
+                    key.send('\n<private message from %s>%s\n' % (accounts[sock]['username'], msg2send))
+                    break  # to stop needless iterations
+
+                # otherwise log that socket off
+                except:
+                    logoff(key)
+
+    # username wasn't in user list
+    else:
+        sock.send('\nNo such user\n')
 
 
 def parse_data(sock, message):
@@ -43,16 +86,31 @@ def parse_data(sock, message):
     :param message: message to parse
     """
 
-    # received PRIVMSG command, check for this first because the other commands are parsed based on white space while this one is not
+    # received PRIVMSG command 
     if message.find('/PRIVMSG')==0:
         # check to see that we even actually have a message
         if len(accounts[sock]['channels']) == 0:
-            sock.send("\n" + "Must join channel to send a message" + "\n")
+            sock.send('\nMust join channel to send a message\n')
         else:
             if message[9]:
-                broadcast_data(sock, "\n" + "<" + accounts[sock]['username'] + "> " + message[9:]) # we have a message so send it
+                broadcast_data(sock, '\n<%s> %s\n' % (accounts[sock]['username'],message[9:])) # we have a message so send it
             else:
-                sock.send("\n" + "Empty message, nothing has been sent") # we didn't actually get a message from the user to send, bad user!
+                sock.send('\nEmpty message, nothing has been sent\n') # we didn't actually get a message from the user to send, bad user!
+
+    # received a msg command
+    elif message.find('/msg') == 0:
+
+        # split message string up to do error checking
+        check_msg = message.split()
+        print len(check_msg)
+
+        # check to make sure we have a sufficient
+        # amount of arguments before we try
+        if len(check_msg) >= 3:
+            privatemsg(sock, message)
+        else:
+            sock.send('\nInvalid command\n')
+
     else:
         # so for simplicity's sake we don't parse the /PRIVMSG command based on white space but everything else we do
         message = message.split()
@@ -90,6 +148,10 @@ def parse_data2(sock, message):
         elif message[0] == '/exit':
             logoff(sock)
 
+        # received nick command
+        elif message[0] == '/nick':
+            changenick(sock, nick=None)
+
         # everything else is invalid
         else:
             sock.send('\nInvalid command\n')
@@ -120,6 +182,10 @@ def parse_data2(sock, message):
         elif message[0] == '/current':
             switchcurrent(sock, message[1])
 
+        # received a nick command
+        elif message[0] == '/nick':
+            changenick(sock, message[1])
+
         # everything else is invalid
         else:
             sock.send('\nInvalid command\n')
@@ -140,6 +206,7 @@ def help(sock, command):
     if command is None:
         sock.send('\nList of commands\n')
         sock.send('/help -- shows valid commands\n')
+        sock.send('/nick <new nickname> -- show/change username\n')
         sock.send('/who -- shows users on server\n')
         sock.send('/list -- shows channels on server\n')
         sock.send('/exit -- logoff\n')
@@ -148,9 +215,17 @@ def help(sock, command):
         sock.send('/join <channel> -- join channel\n')
         sock.send('/leave <channel> -- leave channel\n')
         sock.send('/current <channel> -- change current channel\n')
+        sock.send('/msg <user> <message> -- send user private message\n')
         sock.send('/help <command> -- more info on command\n')
     else:
-        if command == 'who':
+        if command == 'nick':
+            sock.send('\nCommand: /nick\n')
+            sock.send('Arguments: <new username>\n')
+            sock.send('Description: The nick command will' \
+                          ' change your username to <new username>\n')
+            sock.send('If <new username> is not provided,' \
+                          ' current username is echoed\n')
+        elif command == 'who':
             sock.send('\nCommand: /who\n')
             sock.send('Arguments: none\n')
             sock.send('Description: The who command will show you all the users on the server\n')
@@ -167,19 +242,19 @@ def help(sock, command):
         
         elif command == 'whois':
             sock.send('\nCommand: /whois\n')
-            sock.send('Arguments: <username> (a username, not optional)\n')
+            sock.send('Arguments: <username>\n')
             sock.send('Description: The whois command will display basic info about the user specified with <username>\n')
             sock.send('Ex: /whois billy\n')
         
         elif command == 'peek':
             sock.send('\nCommand: /peek\n')
-            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Arguments: <channel>\n')
             sock.send('Description: The peek command will show you a list of users in <channel>\n')
             sock.send('Ex: /peek #channel_one\n')
         
         elif command == 'join':
             sock.send('\nCommand: /join\n')
-            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Arguments: <channel>\n')
             sock.send('Description: The join command will place you in the channel specified with <channel>\n')
             sock.send('If the channel does not exist yet, it will be created\n')
             sock.send('By default the most recent channel you have join becomes your current channel\n')
@@ -188,7 +263,7 @@ def help(sock, command):
         
         elif command == 'leave':
             sock.send('\nCommand: /leave\n')
-            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Arguments: <channel>\n')
             sock.send('Description: The leave command will take you out of the channel specified by <channel>\n')
             sock.send('You must be in a channel in order to leave it.\n')
             sock.send('If you are the last person in the channel, once you leave it will be deleted\n')
@@ -196,10 +271,16 @@ def help(sock, command):
         
         elif command == 'current':
             sock.send('\nCommand: /current\n')
-            sock.send('Arguments: <channel> (channel name, not optional)\n')
+            sock.send('Arguments: <channel>\n')
             sock.send('Description: The current command will switch your current channel\n')
             sock.send('You must be in the channel specified by <channel>\n')
             sock.send('Ex: /current #channel_one\n')
+
+        elif command == 'msg':
+            sock.send('\nCommand: /msg\n')
+            sock.send('Arguments: <user>, <message>\n')
+            sock.send('Description: Send private message <message> to <user>\n')
+            sock.send('Ex: /msg billy hi billybob!\n')
         
         else:
             sock.send('\nSpecified command does not exist.')
@@ -454,12 +535,51 @@ def switchcurrent(sock, channel):
         sock.send('\nCurrently not in %s\nMust be in channel\n' % channel)
 
 
+def changenick(sock, nick):
+    """Function processes a nick command
+    which changes the user's username
+
+    :param sock: socket object
+    :param nick: new username
+    """
+
+    # echo back username
+    if nick is None:
+        sock.send('\nCurrent username: %s\n' % accounts[sock]['username'])
+        return
+
+    if nick in USER_LIST:
+        if nick == accounts[sock]['username']:
+            sock.send('\nThats already your username\n')
+        else:
+            sock.send('\nUsername already in use\n')
+    else:
+        old = accounts[sock]['username']
+
+        # remove the old username
+        USER_LIST.remove(old)
+
+        # set new username
+        accounts[sock]['username'] = nick
+
+        # update the USER_LIST
+        USER_LIST.append(accounts[sock]['username'])
+
+        # tell the user about the change
+        broadcast_data(sock, '\n%s is now know as %s' % (old,accounts[sock]['username']))
+
+
 def signal_handler(signal, frame):
     """Function handles signal interrupt (CTRL-C)
         
     :param signal: signal caught
     :param frame: current stack frame
     """
+
+    for connection in CONNECTION_LIST:
+        if connection != server_socket:
+            logoff(connection)
+    server_socket.close()
     
     logging.info('Server shutting down')
     sys.exit(0)
