@@ -284,6 +284,8 @@ def whois(sock, username):
     :param username: user to look up
     """
 
+    socket = 0
+
     # check to see if username exists
     if username in USER_LIST:
 
