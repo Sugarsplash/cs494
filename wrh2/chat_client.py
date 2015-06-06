@@ -89,7 +89,7 @@ if __name__ == "__main__":
         
             #user entered a message
             else :
-                msg = sys.stdin.readline()
+                msg = sys.stdin.readline(512)
                 s.send(msg)
                 prompt()
             
