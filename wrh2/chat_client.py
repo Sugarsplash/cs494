@@ -8,16 +8,7 @@ import socket   # for socket objects
 import select   # for select function
 import signal   # for signal interrupt
 import sys      # for handling command line arguments
-
-def prompt() :
-    """Function creates a user prompt
-
-    :param username: the user's name
-    """
-
-    sys.stdout.write("->") # prompt user
-    sys.stdout.flush()     # flush buffer
-
+import logging  # logging stuff
 
 def signal_handler(signal, frame):
     """Function handles signal interrupt (CTRL-C)
@@ -36,6 +27,9 @@ if __name__ == "__main__":
     """Main function
 
     """
+
+    LOG_FILENAME = 'logging_ex.out'
+    logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG,)
     
     # user supplied the wrong amount of arguments
     if(len(sys.argv) < 4):
@@ -56,7 +50,6 @@ if __name__ == "__main__":
     except:
         print 'Unable to connect'
         sys.exit()
-
     print 'Connected to IRC server'
 
     # send user's name to server
@@ -67,7 +60,7 @@ if __name__ == "__main__":
         print 'Unable to authenticate username'
         sys.exit()
     print 'Username authenticated'
-    prompt()
+    print 'type /help for list of commands'
 
     while 1:
         socket_list = [sys.stdin, s]
@@ -75,21 +68,51 @@ if __name__ == "__main__":
         # Get the list sockets which are readable
         read_sockets, write_sockets, error_sockets = select.select(socket_list , [], [])
         
-        #try:
         for sock in read_sockets:
-        #incoming message from remote server
+
+            # incoming message from remote server
             if sock == s:
-                data = sock.recv(4096)
+
+                # receive up to 512 bytes of data
+                data = sock.recv(512)
+
+                # if there is no data
+                # connection timed out
+                # close it
                 if not data:
                     print '\nDisconnected from chat server'
+                    sock.close()
                     sys.exit()
+
+                # we have data from the server
                 else:
-                    sys.stdout.write('%s\n' % data)
-                    prompt()
+
+                    # check for carriage-return line-feed pair
+                    # as it represents the end of the message
+                    # from the server
+                    if data.find('\r\n') > -1:
+
+                        # CR-LF pair is there so show message
+                        print data
+
+                    # CR-LF pair is not there so keep receiving
+                    # up to 512 bytes
+                    # note: that is CR-LF pair is never present
+                    # we've got a problem
+                    #else:
+                    #    logging.debug('[512-len(data) = %s] Data: %s' % (str(512-len(data)),data))
+                    #    data += sock.recv(512-len(data))
         
-            #user entered a message
-            else :
-                msg = sys.stdin.readline(512)
+            # user entered message
+            else:
+
+                # read 510 bytes
+                msg = sys.stdin.readline(510)
+
+                # add carriage-return line-feed pair
+                # to terminate message
+                msg += '\r\n'
+
+                # send it
                 s.send(msg)
-                prompt()
             
