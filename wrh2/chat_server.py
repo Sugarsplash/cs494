@@ -439,6 +439,9 @@ def logoff(sock):
     # remove socket from connection list
     CONNECTION_LIST.remove(sock)
 
+    # remove account
+    del accounts[sock]
+
 
 def whois(sock, username):
     """Function processes a whois command
@@ -759,10 +762,16 @@ if __name__ == "__main__":
                 if name.find('\r\n') > -1:
                     name = name.strip()
 
-                accounts[sockfd]['username']=name
-                USER_LIST.append(accounts[sockfd]['username']) #Add to user list
-                logging.info('Client (%s, %s) connected' % addr) #log some information
-                logging.info('Client is know as %s, added to the user list' % accounts[sockfd]['username']) #log some information
+                # set the username in the account
+                accounts[sockfd]['username'] = name
+
+                # add to user list
+                USER_LIST.append(name)
+
+                # log some info for the server
+                logging.info('Client (%s, %s) connected' % addr)
+                logging.info('Client is know as %s' % name)
+                logging.info('Updated user list: %s' % USER_LIST)
                 
             #Some incoming message from a client
             else:
