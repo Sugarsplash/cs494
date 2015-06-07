@@ -8,7 +8,7 @@ import socket   # for socket objects
 import select   # for select function
 import signal   # for signal interrupt
 import sys      # for handling command line arguments
-import logging  # logging stuff
+
 
 def signal_handler(signal, frame):
     """Function handles signal interrupt (CTRL-C)

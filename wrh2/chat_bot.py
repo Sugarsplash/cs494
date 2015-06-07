@@ -9,15 +9,6 @@ import select   # for select function
 import signal   # for signal interrupt
 import sys      # for handling command line arguments
 
-def prompt() :
-    """Function creates a user prompt
-
-    :param username: the user's name
-    """
-
-    sys.stdout.write("->") # prompt user
-    sys.stdout.flush()     # flush buffer
-
 
 def signal_handler(signal, frame):
     """Function handles signal interrupt (CTRL-C)
@@ -61,7 +52,7 @@ if __name__ == "__main__":
         print 'Unable to authenticate username'
         sys.exit()
     print 'Username authenticated'
-    prompt()
+
 
     while 1:
         socket_list = [sys.stdin, s]
@@ -78,17 +69,17 @@ if __name__ == "__main__":
                     print '\nDisconnected from chat server'
                     sys.exit()
                 else:
-                    sys.stdout.write(data)
-                    if data.find(username) > -1:
-                        if data.find('hi') > -1:
-                            s.send('hi')
-                        if data.find('how are you') > -1:
-                            s.send('good')
-                    prompt()
+                    if data.find('\r\n') > -1:
+                        print data
+                        if data.find(username) > -1:
+                            if data.find('hi') > -1:
+                                s.send('hi')
+                            if data.find('how are you') > -1:
+                                s.send('good')
         
             #user entered a message
             else :
-                msg = sys.stdin.readline()
+                msg = sys.stdin.readline(510)
+                msg += '\r\n'
                 s.send(msg)
-                prompt()
             
