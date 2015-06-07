@@ -34,9 +34,9 @@ def broadcast_data (sock, message):
 
                 # try to send the message
                 # if we can't send socket timed out so log client off
-                try :
+                try:
                     socket.send(message)
-                except :
+                except:
                     logoff(socket)
 
 
@@ -250,12 +250,11 @@ def help(sock, command):
     if command is None:
         sock.send('\nList of commands\n')
         sock.send('/help -- shows valid commands\n')
-        sock.send('/nick <new nickname> -- show/change username\n')
-        sock.send('/who -- shows users on server\n')
+        sock.send('/nick <nickname> -- show/change username\n')
+        sock.send('/who <channel> -- shows users\n')
         sock.send('/list -- shows channels on server\n')
         sock.send('/exit -- logoff\n')
         sock.send('/whois <username> -- info about user\n')
-        sock.send('/peek <channel> -- shows users in channel\n')
         sock.send('/join <channel> -- join channel\n')
         sock.send('/leave <channel> -- leave channel\n')
         sock.send('/current <channel> -- change current channel\n')
@@ -264,15 +263,17 @@ def help(sock, command):
     else:
         if command == 'nick':
             sock.send('\nCommand: /nick\n')
-            sock.send('Arguments: <new username>\n')
+            sock.send('Arguments: <nickname> (optional)\n')
             sock.send('Description: The nick command will' \
-                          ' change your username to <new username>\n')
-            sock.send('If <new username> is not provided,' \
+                          ' change your username to <nickname>\n')
+            sock.send('If <nickname> is not provided,' \
                           ' current username is echoed\r\n')
         elif command == 'who':
             sock.send('\nCommand: /who\n')
-            sock.send('Arguments: none\n')
-            sock.send('Description: The who command will show you all the users on the server\r\n')
+            sock.send('Arguments: <channel> (optional)\n')
+            sock.send('Description: The who command will show you all the users on the server\n')
+            sock.send('when channel is not provided. When channel provided it will show you\n')
+            sock.send('the users in that channel\r\n')
 
         elif command == 'list':
             sock.send('\nCommand: /list\n')
@@ -286,19 +287,13 @@ def help(sock, command):
         
         elif command == 'whois':
             sock.send('\nCommand: /whois\n')
-            sock.send('Arguments: <username>\n')
+            sock.send('Arguments: <username> (required)\n')
             sock.send('Description: The whois command will display basic info about the user specified with <username>\n')
             sock.send('Ex: /whois billy\r\n')
-        
-        elif command == 'peek':
-            sock.send('\nCommand: /peek\n')
-            sock.send('Arguments: <channel>\n')
-            sock.send('Description: The peek command will show you a list of users in <channel>\n')
-            sock.send('Ex: /peek #channel_one\r\n')
-        
+
         elif command == 'join':
             sock.send('\nCommand: /join\n')
-            sock.send('Arguments: <channel>\n')
+            sock.send('Arguments: <channel> (required)\n')
             sock.send('Description: The join command will place you in the channel specified with <channel>\n')
             sock.send('If the channel does not exist yet, it will be created\n')
             sock.send('By default the most recent channel you have join becomes your current channel\n')
@@ -307,7 +302,7 @@ def help(sock, command):
         
         elif command == 'leave':
             sock.send('\nCommand: /leave\n')
-            sock.send('Arguments: <channel>\n')
+            sock.send('Arguments: <channel> (required)\n')
             sock.send('Description: The leave command will take you out of the channel specified by <channel>\n')
             sock.send('You must be in a channel in order to leave it.\n')
             sock.send('If you are the last person in the channel, once you leave it will be deleted\n')
@@ -315,14 +310,14 @@ def help(sock, command):
         
         elif command == 'current':
             sock.send('\nCommand: /current\n')
-            sock.send('Arguments: <channel>\n')
+            sock.send('Arguments: <channel> (required)\n')
             sock.send('Description: The current command will switch your current channel\n')
             sock.send('You must be in the channel specified by <channel>\n')
             sock.send('Ex: /current #channel_one\r\n')
 
         elif command == 'msg':
             sock.send('\nCommand: /msg\n')
-            sock.send('Arguments: <user>, <message>\n')
+            sock.send('Arguments: <user>, <message> (required)\n')
             sock.send('Description: Send private message <message> to <user>\n')
             sock.send('Ex: /msg billy hi billybob!\r\n')
         
@@ -420,16 +415,15 @@ def logoff(sock):
     
     user = accounts[sock]['username']
     channels = accounts[sock]['channels']
-    logging.info('%s is in following channels: %s' % (user, channels))
 
     # tell everyone that someone is leaving
     broadcast_data(sock, '\n%s has gone offline\r\n' % user)
     
     # Remove user from all the channels that they are currently in
-    for i in channels:
-        leavechannel(sock, i)
-        channels = accounts[sock]['channels']
-        logging.info('%s is in following channels: %s' % (user, channels))
+    # this is a nifty trick right here and necessary in this case!
+    # iterate over the list backwards, removing channels 1 at a time! 
+    for i in xrange(len(channels) - 1, -1, -1):
+        leavechannel(sock, channels[i])
 
     # for the server log
     logging.info('%s is offline' % user)
@@ -701,7 +695,6 @@ def signal_handler(signal, frame):
     """
 
     for connection in CONNECTION_LIST:
-        print connection
         if connection != server_socket:
             logoff(connection)
     server_socket.close()
