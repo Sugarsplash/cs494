@@ -7,8 +7,9 @@ import socket  # for socket objects
 import select  # for select function
 import logging # for logging
 import signal  # for signal interrupts
-import sys
-import random
+import sys     # for sys calls
+import random  # for random stuff
+
 
 def broadcast_data (sock, message):
     """Function to broadcast chat messages to all connected clients
@@ -22,22 +23,32 @@ def broadcast_data (sock, message):
     :param message: message to send
     """
 
+    # stores sockets that have a non-empty current field
+    valid_users = []
 
-    # Go through sockets in connection list
+    # go through sockets in connection list
     for socket in CONNECTION_LIST:
 
-        # Do not send the message to master socket and the client who has send us the message
+        # do not store master socket or client who is sending message
         if socket != server_socket and socket != sock:
+            
+            # find sockets with non empty current channel
+            if accounts[socket]['current'] != '':
+                
+                # store them in array
+                valid_users.append(socket)
 
-            # Only send to sockets who are looking at the same current channel
-            if accounts[socket]['current'] == accounts[sock]['current']:
+    # go through sockets in valid users
+    for socket in valid_users:
 
-                # try to send the message
-                # if we can't send socket timed out so log client off
-                try:
-                    socket.send(message)
-                except:
-                    logoff(socket)
+        # Only send to sockets who are looking at the same current channel
+        if accounts[socket]['current'] == accounts[sock]['current']:
+            # try to send the message
+            # if we can't send socket timed out so log client off
+            try:
+                socket.send(message)
+            except:
+                logoff(socket)
 
 
 def parse_data(sock, message):
@@ -762,23 +773,31 @@ if __name__ == "__main__":
                 if name.find('\r\n') > -1:
                     name = name.strip()
 
-                # set the username in the account
-                accounts[sockfd]['username'] = name
+                if name in USER_LIST:
+                    sockfd.send('\nUsername already in use\r\n')
+                    sockfd.close()
+                    CONNECTION_LIST.remove(sockfd)
+                else:
 
-                # add to user list
-                USER_LIST.append(name)
+                    # welcome new user!
+                    sockfd.send('Username authenticated!\r\n')
+                    sockfd.send('Welcome to Internet Relay Chat!!\r\n')
+                    sockfd.send('type /help for list of commands\r\n')
+                    # set the username in the account
+                    accounts[sockfd]['username'] = name
 
-                # log some info for the server
-                logging.info('Client (%s, %s) connected' % addr)
-                logging.info('Client is know as %s' % name)
-                logging.info('Updated user list: %s' % USER_LIST)
+                    # add to user list
+                    USER_LIST.append(name)
+
+                    # log some info for the server
+                    logging.info('Client (%s, %s) connected' % addr)
+                    logging.info('Client is know as %s' % name)
+                    logging.info('Updated user list: %s' % USER_LIST)
                 
             #Some incoming message from a client
             else:
                 # Data recieved from client, process it
                 try:
-                    #In Windows, sometimes when a TCP program closes abruptly,
-                    # a "Connection reset by peer" exception will be thrown
                     data = sock.recv(RECV_BUFFER).strip()
                     if data:
                         if data.find('/')==0:

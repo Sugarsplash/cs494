@@ -38,6 +38,12 @@ if __name__ == "__main__":
     port = int(sys.argv[2]) # get the IRC server  port number
     username = sys.argv[3]  # get the user's name
 
+    # protect against user names
+    # longer than 9 chars
+    if len(username) > 9:
+        print 'Username is too long. Max is 9 characters'
+        sys.exit()
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # create TCP Socket
     s.settimeout(2)                                       # set timeout to 2 seconds
     
@@ -56,8 +62,6 @@ if __name__ == "__main__":
         # bad username, exit program
         print 'Unable to authenticate username'
         sys.exit()
-    print 'Username authenticated'
-    print 'type /help for list of commands'
 
     while 1:
         socket_list = [sys.stdin, s]
