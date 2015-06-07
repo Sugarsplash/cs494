@@ -798,12 +798,24 @@ if __name__ == "__main__":
             else:
                 # Data recieved from client, process it
                 try:
+
+                    # receive and strip data
+                    # stripping makes parsing easier (I guess)
                     data = sock.recv(RECV_BUFFER).strip()
+
+                    # we have data
                     if data:
+
+                        # look to see if its a command
                         if data.find('/')==0:
+
+                            # it is so lets parse the message as is
                             parse_data(sock, data)
+
+                        # no command probably intended to be
+                        # normal chat message
                         else:
-                            parse_data(sock, "/PRIVMSG " + data)
+                            parse_data(sock, '/PRIVMSG ' + data)
 
                 except:
                     logoff(sock)
