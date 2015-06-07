@@ -521,25 +521,12 @@ def joinchannel(sock, channel):
     """
 
     user = accounts[sock]['username']
+    num_channels = len(accounts[sock]['channels'])
 
     if channel in CHANNEL_LIST:
-        # add channel to user's channels
-        accounts[sock]['channels'].append(channel)
 
-        # make channel the user's current channel
-        accounts[sock]['current'] = channel
-
-        # notify client
-        sock.send('\nJoined %s\r\n' % channel)
-
-        # tell everyone someone has arrived
-        broadcast_data(sock, ('\n%s joined %s\r\n') % (user, channel))
-
-    else:
-        # make sure channel starts with # character
-        if channel.find('#') == 0:
-            # create channel by adding it to the channel list
-            CHANNEL_LIST.append(channel)
+        # make sure channel limit not reached
+        if num_channels < 10:
 
             # add channel to user's channels
             accounts[sock]['channels'].append(channel)
@@ -553,14 +540,45 @@ def joinchannel(sock, channel):
             # tell everyone someone has arrived
             broadcast_data(sock, ('\n%s joined %s\r\n') % (user, channel))
 
-            # for the server logs
-            logging.info('New channel: %s' % channel)
-            logging.info('Updated channel list: %s' % CHANNEL_LIST)
-
-        # invalid channel name, no bueno
         else:
-            sock.send('\nInvalid channel name\r\n')
-            sock.send('\nSee /help join\r\n')
+            # notify user that limit reached
+            sock.send('\nChannel limit reached\r\n')
+
+    else:
+
+        # make sure channel limit not reached
+        if num_channels < 10:
+
+            # make sure channel starts with # character
+            if channel.find('#') == 0:
+
+                # create channel by adding it to the channel list
+                CHANNEL_LIST.append(channel)
+
+                # add channel to user's channels
+                accounts[sock]['channels'].append(channel)
+
+                # make channel the user's current channel
+                accounts[sock]['current'] = channel
+
+                # notify client
+                sock.send('\nJoined %s\r\n' % channel)
+
+                # tell everyone someone has arrived
+                broadcast_data(sock, ('\n%s joined %s\r\n') % (user, channel))
+
+                # for the server logs
+                logging.info('New channel: %s' % channel)
+                logging.info('Updated channel list: %s' % CHANNEL_LIST)
+
+            # invalid channel name, no bueno
+            else:
+                sock.send('\nInvalid channel name\r\n')
+                sock.send('\nSee /help join\r\n')
+
+        else:
+            # notify user that limit reached
+            sock.send('\nChannel limit reached\r\n')
 
 
 def leavechannel(sock, channel):
@@ -727,9 +745,9 @@ def signal_handler(signal, frame):
     :param frame: current stack frame
     """
 
-    for connection in CONNECTION_LIST:
-        if connection != server_socket:
-            logoff(connection)
+    for s in CONNECTION_LIST:
+        if s != server_socket:
+            logoff(s)
     server_socket.close()
 
     logging.info('Server shutting down')
@@ -809,7 +827,6 @@ if __name__ == "__main__":
                 accounts[sockfd] = {
                     'username': '',
                     'ip': '',
-                    'key': '',
                     'channels': [],
                     'current': ''
                 }
@@ -870,5 +887,3 @@ if __name__ == "__main__":
                 except:
                     logoff(sock)
                     continue
-
-server_socket.close()
