@@ -12,7 +12,7 @@ import sys      # for handling command line arguments
 
 def signal_handler(signal, frame):
     """Function handles signal interrupt (CTRL-C)
-    
+
     :param signal: signal caught
     :param frame: current stack frame
     """
@@ -27,16 +27,21 @@ if __name__ == "__main__":
     """Main function
 
     """
-    
+
     # user supplied the wrong amount of arguments
     if(len(sys.argv) < 4):
         # show proper usage and exit program
         print 'Usage : python chat_client.py hostname port username'
         sys.exit()
 
-    host = sys.argv[1]      # get the IRC server address
-    port = int(sys.argv[2]) # get the IRC server  port number
-    username = sys.argv[3]  # get the user's name
+    # get the IRC server address
+    host = sys.argv[1]
+
+    # get the IRC server port
+    port = int(sys.argv[2])
+
+    # get the user's name
+    username = sys.argv[3]
 
     # protect against user names
     # longer than 9 chars
@@ -44,9 +49,12 @@ if __name__ == "__main__":
         print 'Username is too long. Max is 9 characters'
         sys.exit()
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # create TCP Socket
-    s.settimeout(2)                                       # set timeout to 2 seconds
-    
+    # create TCP Socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # set timeout to 2 seconds
+    s.settimeout(2)
+
     # connect to remote host
     try:
         s.connect((host, port))
@@ -65,10 +73,11 @@ if __name__ == "__main__":
 
     while 1:
         socket_list = [sys.stdin, s]
-        
+
         # Get the list sockets which are readable
-        read_sockets, write_sockets, error_sockets = select.select(socket_list , [], [])
-        
+        read_sockets, write_sockets, error_sockets = select.select(
+            socket_list, [], [])
+
         for sock in read_sockets:
 
             # incoming message from remote server
@@ -96,14 +105,6 @@ if __name__ == "__main__":
                         # CR-LF pair is there so show message
                         print data
 
-                    # CR-LF pair is not there so keep receiving
-                    # up to 512 bytes
-                    # note: that is CR-LF pair is never present
-                    # we've got a problem
-                    #else:
-                    #    logging.debug('[512-len(data) = %s] Data: %s' % (str(512-len(data)),data))
-                    #    data += sock.recv(512-len(data))
-        
             # user entered message
             else:
 
@@ -116,4 +117,3 @@ if __name__ == "__main__":
 
                 # send it
                 s.send(msg)
-            
