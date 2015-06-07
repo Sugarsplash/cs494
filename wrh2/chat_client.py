@@ -27,9 +27,6 @@ if __name__ == "__main__":
     """Main function
 
     """
-
-    LOG_FILENAME = 'logging_ex.out'
-    logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG,)
     
     # user supplied the wrong amount of arguments
     if(len(sys.argv) < 4):
